@@ -31,6 +31,198 @@ const CAT_COLORS = {
   "Pesatura": "#888780",
 };
 
+// INVENTARIO
+function InventoryPage({ currentUser, supabase }) {
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [modal, setModal] = useState(null); // 'add', 'load', 'unload'
+  const [selected, setSelected] = useState(null);
+  const [form, setForm] = useState({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
+  const [amount, setAmount] = useState("");
+
+  useEffect(() => {
+    supabase.from("inventory").select("*").order("category").then(({ data }) => {
+      setItems(data || []);
+      setLoading(false);
+    });
+  }, []);
+
+  const addItem = async () => {
+    if (!form.name.trim()) return alert("Inserisci il nome!");
+    const { data, error } = await supabase.from("inventory").insert([{ ...form, quantity: +form.quantity, min_quantity: +form.min_quantity, updated_by: currentUser.name }]).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => [...prev, data]);
+    setModal(null);
+    setForm({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
+  };
+
+  const updateQuantity = async (type) => {
+    const delta = type === "load" ? +amount : -amount;
+    const newQty = Math.max(0, selected.quantity + delta);
+    const newStatus = newQty === 0 ? "exhausted" : selected.category === "Bombola" ? selected.status : "available";
+    const { data, error } = await supabase.from("inventory").update({ quantity: newQty, status: newStatus, updated_by: currentUser.name, updated_at: new Date() }).eq("id", selected.id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => prev.map(i => i.id === selected.id ? data : i));
+    setModal(null);
+    setAmount("");
+  };
+
+  const updateStatus = async (id, status) => {
+    const { data, error } = await supabase.from("inventory").update({ status, updated_by: currentUser.name, updated_at: new Date() }).eq("id", id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => prev.map(i => i.id === id ? data : i));
+  };
+
+  const deleteItem = async (id) => {
+    if (!window.confirm("Vuoi eliminare questo elemento?")) return;
+    await supabase.from("inventory").delete().eq("id", id);
+    setItems(prev => prev.filter(i => i.id !== id));
+  };
+
+  const STATUS = {
+    available: { bg: "#EAF3DE", color: "#3B6D11", label: "Disponibile" },
+    low: { bg: "#FAEEDA", color: "#854F0B", label: "Scorta bassa" },
+    exhausted: { bg: "#FAECE7", color: "#A32D2D", label: "Esaurito" },
+    full: { bg: "#EAF3DE", color: "#3B6D11", label: "Piena" },
+    partial: { bg: "#FAEEDA", color: "#854F0B", label: "Parziale" },
+    empty: { bg: "#FAECE7", color: "#A32D2D", label: "Vuota" },
+  };
+
+  const getStatus = (item) => {
+    if (item.category === "Bombola") return STATUS[item.status] || STATUS.available;
+    if (item.quantity === 0) return STATUS.exhausted;
+    if (item.min_quantity > 0 && item.quantity <= item.min_quantity) return STATUS.low;
+    return STATUS.available;
+  };
+
+  const reagenti = items.filter(i => i.category === "Reagente");
+  const bombole = items.filter(i => i.category === "Bombola");
+
+  if (loading) return <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>Caricamento...</div>;
+
+  return (
+    <div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Gestione magazzino reagenti e bombole</p>
+        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer" }}>
+          <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
+        </button>
+      </div>
+
+      {[{ label: "🧪 Reagenti", data: reagenti }, { label: "🫧 Bombole", data: bombole }].map(({ label, data }) => (
+        <div key={label} style={{ marginBottom: 24 }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: "#555", marginBottom: 8 }}>{label}</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            {data.length === 0
+              ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun elemento</p>
+              : data.map(item => {
+                  const st = getStatus(item);
+                  return (
+                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 10 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                          <span style={{ fontWeight: 500, fontSize: 14 }}>{item.name}</span>
+                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{st.label}</span>
+                        </div>
+                        <div style={{ fontSize: 12, color: "#888" }}>
+                          {item.category === "Reagente"
+                            ? <>Quantità: <b>{item.quantity} {item.unit}</b> {item.min_quantity > 0 && `(min: ${item.min_quantity} ${item.unit})`}</>
+                            : <>Stato bombola</>
+                          }
+                          {item.notes && <span style={{ color: "#aaa", marginLeft: 8 }}>· {item.notes}</span>}
+                        </div>
+                        {item.updated_by && <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>Aggiornato da {item.updated_by}</div>}
+                      </div>
+                      <div style={{ display: "flex", gap: 6 }}>
+                        {item.category === "Reagente" ? (
+                          <>
+                            <button onClick={() => { setSelected(item); setModal("load"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #3B6D11", color: "#3B6D11", background: "transparent", cursor: "pointer" }}>
+                              <i className="ti ti-arrow-up" style={{ fontSize: 13, verticalAlign: -2 }} /> Carica
+                            </button>
+                            <button onClick={() => { setSelected(item); setModal("unload"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #854F0B", color: "#854F0B", background: "transparent", cursor: "pointer" }}>
+                              <i className="ti ti-arrow-down" style={{ fontSize: 13, verticalAlign: -2 }} /> Scarica
+                            </button>
+                          </>
+                        ) : (
+                          <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
+                            style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                            <option value="full">Piena</option>
+                            <option value="partial">Parziale</option>
+                            <option value="empty">Vuota</option>
+                          </select>
+                        )}
+                        {currentUser.role === "admin" && (
+                          <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
+                            <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+            }
+          </div>
+        </div>
+      ))}
+
+      {/* MODAL AGGIUNGI */}
+      {modal === "add" && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 360, maxWidth: "90vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <p style={{ fontWeight: 500, fontSize: 15, margin: 0 }}>Aggiungi elemento</p>
+              <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#888" }}>×</button>
+            </div>
+            {[
+              { label: "Nome", key: "name", type: "text", placeholder: "es. Etanolo 96%" },
+              { label: "Quantità", key: "quantity", type: "number", placeholder: "0" },
+              { label: "Unità", key: "unit", type: "text", placeholder: "es. L, kg, pz" },
+              { label: "Scorta minima", key: "min_quantity", type: "number", placeholder: "0" },
+              { label: "Note", key: "notes", type: "text", placeholder: "opzionale" },
+            ].map(f => (
+              <div key={f.key}>
+                <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>{f.label}</label>
+                <input type={f.type} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  style={{ width: "100%", marginBottom: 10, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+              </div>
+            ))}
+            <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Categoria</label>
+            <select value={form.category} onChange={e => setForm(p => ({ ...p, category: e.target.value }))}
+              style={{ width: "100%", marginBottom: 14, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+              <option value="Reagente">Reagente</option>
+              <option value="Bombola">Bombola</option>
+            </select>
+            <button onClick={addItem} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
+              Aggiungi
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CARICA/SCARICA */}
+      {(modal === "load" || modal === "unload") && selected && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 320, maxWidth: "90vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <p style={{ fontWeight: 500, fontSize: 15, margin: 0 }}>{modal === "load" ? "📦 Carica" : "📤 Scarica"}: {selected.name}</p>
+              <button onClick={() => { setModal(null); setAmount(""); }} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#888" }}>×</button>
+            </div>
+            <p style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>Quantità attuale: <b>{selected.quantity} {selected.unit}</b></p>
+            <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Quantità da {modal === "load" ? "aggiungere" : "rimuovere"}</label>
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0"
+              placeholder="0"
+              style={{ width: "100%", marginBottom: 14, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            <button onClick={() => updateQuantity(modal)} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: modal === "load" ? "#3B6D11" : "#854F0B", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
+              Conferma
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // LOGIN
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -53,7 +245,7 @@ function LoginPage({ onLogin }) {
       <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 340, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <i className="ti ti-flask" style={{ fontSize: 36, color: "#7F77DD" }} />
-          <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 600 }}>LTCE Apparecchiature</h2>
+          <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 600 }}>LTCE</h2>
           <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Accedi al sistema di prenotazione</p>
         </div>
         {error && <p style={{ color: "#A32D2D", fontSize: 13, background: "#FAECE7", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{error}</p>}
@@ -200,7 +392,7 @@ export default function App() {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingBottom: 12, borderBottom: "0.5px solid #e0e0e0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <i className="ti ti-flask" style={{ fontSize: 22, color: "#7F77DD" }} />
-          <span style={{ fontWeight: 500, fontSize: 17 }}>LTCE Apparecchiature</span>
+          <span style={{ fontWeight: 500, fontSize: 17 }}>LTCE</span>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <span style={{ fontSize: 13, color: "#888" }}>👤 {currentUser.name}</span>
@@ -215,6 +407,7 @@ export default function App() {
         {navBtn("catalog", "Apparecchiature", "microscope")}
         {navBtn("calendar", "Calendario", "calendar")}
         {navBtn("mybookings", "Le mie prenotazioni", "bookmark")}
+        {navBtn("inventory", "Inventario", "box")}
         {currentUser.role === "admin" && navBtn("admin", "Admin", "settings")}
       </div>
 
@@ -320,6 +513,9 @@ export default function App() {
           }
         </div>
       )}
+
+      {/* INVENTORY */}
+      {view === "inventory" && <InventoryPage currentUser={currentUser} supabase={supabase} />}
 
       {/* ADMIN */}
       {view === "admin" && currentUser.role === "admin" && (
