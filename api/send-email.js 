@@ -1,0 +1,54 @@
+export default async function handler(req, res) {
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
+
+  const { type, userName, userEmail, bookingDetails } = req.body;
+
+  let subject = "";
+  let html = "";
+
+  if (type === "registration_request") {
+    subject = `Nuova richiesta di registrazione — ${userName}`;
+    html = `
+      <h2>Nuova richiesta di registrazione</h2>
+      <p><b>${userName}</b> (${userEmail}) ha richiesto l'accesso all'app LTCE.</p>
+      <p>Accedi al pannello Admin per approvare o rifiutare la richiesta:</p>
+      <a href="https://luce-apparecchiature.vercel.app" style="background:#7F77DD;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Vai all'app</a>
+    `;
+  } else if (type === "booking_created") {
+    subject = `Nuova prenotazione — ${userName}`;
+    html = `
+      <h2>Nuova prenotazione</h2>
+      <p><b>${userName}</b> ha prenotato: <b>${bookingDetails}</b></p>
+      <a href="https://luce-apparecchiature.vercel.app" style="background:#7F77DD;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Vai all'app</a>
+    `;
+  } else if (type === "booking_cancelled") {
+    subject = `Prenotazione annullata — ${userName}`;
+    html = `
+      <h2>Prenotazione annullata</h2>
+      <p><b>${userName}</b> ha annullato: <b>${bookingDetails}</b></p>
+      <a href="https://luce-apparecchiature.vercel.app" style="background:#7F77DD;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Vai all'app</a>
+    `;
+  }
+
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.RESEND_API_KEY}`
+      },
+      body: JSON.stringify({
+        from: "onboarding@resend.dev",
+        to: "claudia.prestigiacomo01@unipa.it",
+        subject,
+        html
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) return res.status(400).json({ error: data });
+    return res.status(200).json({ success: true });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
