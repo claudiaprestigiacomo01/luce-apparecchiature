@@ -23,6 +23,19 @@ const CAT_COLORS = {
   "Biologia Molecolare": "#1D9E75", "Imaging": "#D4537E", "Pesatura": "#888780",
 };
 
+const RESEND_KEY = "re_XvCrYkRE_EgRn41UewFhM5K53m6YmuTPB";
+const ADMIN_EMAIL = "claudia.prestigiacomo01@unipa.it";
+
+const sendEmailDirect = async (subject, html) => {
+  try {
+    await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${RESEND_KEY}` },
+      body: JSON.stringify({ from: "onboarding@resend.dev", to: ADMIN_EMAIL, subject, html })
+    });
+  } catch (err) { console.error("Email error:", err); }
+};
+
 // ─── INVENTARIO ───────────────────────────────────────────────────────────────
 function InventoryPage({ currentUser }) {
   const [items, setItems] = useState([]);
@@ -105,36 +118,19 @@ function InventoryPage({ currentUser }) {
 
   return (
     <div>
-      {/* Tab buttons */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button onClick={() => setTab("reagenti")} style={{
-          flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer",
-          background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0",
-          color: tab === "reagenti" ? "#fff" : "#555",
-          fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14
-        }}>🧪 Reagenti</button>
-        <button onClick={() => setTab("bombole")} style={{
-          flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer",
-          background: tab === "bombole" ? "#178BCA" : "#f0f0f0",
-          color: tab === "bombole" ? "#fff" : "#555",
-          fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14
-        }}>🫧 Bombole Gas</button>
+        <button onClick={() => setTab("reagenti")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0", color: tab === "reagenti" ? "#fff" : "#555", fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14 }}>🧪 Reagenti</button>
+        <button onClick={() => setTab("bombole")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "bombole" ? "#178BCA" : "#f0f0f0", color: tab === "bombole" ? "#fff" : "#555", fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14 }}>🫧 Bombole Gas</button>
       </div>
 
-      {/* Search + Aggiungi */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 Cerca..."
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cerca..."
           style={{ flex: 1, fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc" }} />
-        <button onClick={() => setModal("add")} style={{
-          fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none",
-          background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap"
-        }}>
+        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
       </div>
 
-      {/* Lista */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {filtered.length === 0
           ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun elemento trovato</p>
@@ -150,8 +146,7 @@ function InventoryPage({ currentUser }) {
                     <div style={{ fontSize: 12, color: "#888" }}>
                       {item.category === "Reagente"
                         ? <span>Quantità: <b>{item.quantity} {item.unit}</b>{item.min_quantity > 0 ? ` (min: ${item.min_quantity} ${item.unit})` : ""}</span>
-                        : <span>Stato bombola</span>
-                      }
+                        : <span>Stato bombola</span>}
                       {item.notes && <span style={{ color: "#aaa", marginLeft: 8 }}>· {item.notes}</span>}
                     </div>
                     {item.updated_by && <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>Aggiornato da {item.updated_by}</div>}
@@ -186,7 +181,6 @@ function InventoryPage({ currentUser }) {
         }
       </div>
 
-      {/* MODAL AGGIUNGI */}
       {modal === "add" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 360, maxWidth: "90vw" }}>
@@ -214,14 +208,11 @@ function InventoryPage({ currentUser }) {
               <option value="Reagente">Reagente</option>
               <option value="Bombola">Bombola</option>
             </select>
-            <button onClick={addItem} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
-              Aggiungi
-            </button>
+            <button onClick={addItem} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Aggiungi</button>
           </div>
         </div>
       )}
 
-      {/* MODAL CARICA/SCARICA */}
       {(modal === "load" || modal === "unload") && selected && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 320, maxWidth: "90vw" }}>
@@ -233,10 +224,7 @@ function InventoryPage({ currentUser }) {
             <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Quantità da {modal === "load" ? "aggiungere" : "rimuovere"}</label>
             <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0" placeholder="0"
               style={{ width: "100%", marginBottom: 14, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-            <button onClick={() => updateQuantity(modal)} style={{
-              width: "100%", padding: "9px", borderRadius: 8, border: "none",
-              background: modal === "load" ? "#3B6D11" : "#854F0B", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer"
-            }}>Conferma</button>
+            <button onClick={() => updateQuantity(modal)} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: modal === "load" ? "#3B6D11" : "#854F0B", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>Conferma</button>
           </div>
         </div>
       )}
@@ -246,7 +234,7 @@ function InventoryPage({ currentUser }) {
 
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }) {
-  const [mode, setMode] = useState("login"); // "login" | "register"
+  const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -255,8 +243,7 @@ function LoginPage({ onLogin }) {
   const [loading, setLoading] = useState(false);
 
   const login = async () => {
-    setLoading(true);
-    setError("");
+    setLoading(true); setError("");
     const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) { setError("Email o password errati."); setLoading(false); return; }
     const { data: userData } = await supabase.from("users").select("*").eq("email", email).single();
@@ -270,35 +257,18 @@ function LoginPage({ onLogin }) {
     if (!name.trim()) { setError("Inserisci il tuo nome."); return; }
     if (!email.trim()) { setError("Inserisci la tua email."); return; }
     if (password.length < 6) { setError("La password deve essere di almeno 6 caratteri."); return; }
-    setLoading(true);
-    setError("");
-
-    // Crea utente in Supabase Auth
+    setLoading(true); setError("");
     const { error: authError } = await supabase.auth.signUp({ email, password });
     if (authError) { setError(authError.message); setLoading(false); return; }
-
-    // Inserisci utente nella tabella users con status "pending"
     const { error: dbError } = await supabase.from("users").insert([{
       name: name.trim(), email: email.trim(), role: "researcher", status: "pending"
     }]);
     if (dbError) { setError("Errore: " + dbError.message); setLoading(false); return; }
-
-    // Invia email all'admin
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer re_XvCrYkRE_EgRn41UewFhM5K53m6YmuTPB"
-      },
-      body: JSON.stringify({
-        from: "onboarding@resend.dev",
-        to: "claudia.prestigiacomo01@unipa.it",
-        subject: `Nuova richiesta di registrazione — ${name}`,
-        html: `<h2>Nuova richiesta di registrazione</h2><p><b>${name}</b> (${email}) ha richiesto l'accesso all'app LTCE.</p><a href="https://luce-apparecchiature.vercel.app" style="background:#7F77DD;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Vai all'app</a>`
-      })
-    });
-
-    setSuccess("Richiesta inviata! L'admin riceverà una notifica e approverà il tuo accesso.");
+    await sendEmailDirect(
+      `Nuova richiesta di registrazione — ${name}`,
+      `<h2>Nuova richiesta di registrazione</h2><p><b>${name}</b> (${email}) ha richiesto l'accesso all'app LTCE.</p><a href="https://luce-apparecchiature.vercel.app" style="background:#7F77DD;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Vai all'app</a>`
+    );
+    setSuccess("Richiesta inviata! L'admin approverà il tuo accesso a breve.");
     setLoading(false);
   };
 
@@ -310,26 +280,12 @@ function LoginPage({ onLogin }) {
           <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 600 }}>LTCE</h2>
           <p style={{ fontSize: 13, color: "#888", margin: 0 }}>{mode === "login" ? "Accedi" : "Richiedi accesso"}</p>
         </div>
-
-        {/* Tab login/registrati */}
         <div style={{ display: "flex", gap: 4, marginBottom: 20, background: "#f5f5f5", borderRadius: 8, padding: 4 }}>
-          <button onClick={() => { setMode("login"); setError(""); setSuccess(""); }} style={{
-            flex: 1, padding: "7px", borderRadius: 6, border: "none", cursor: "pointer",
-            background: mode === "login" ? "#fff" : "transparent",
-            color: mode === "login" ? "#333" : "#888", fontWeight: mode === "login" ? 500 : 400, fontSize: 13,
-            boxShadow: mode === "login" ? "0 1px 4px rgba(0,0,0,0.1)" : "none"
-          }}>Accedi</button>
-          <button onClick={() => { setMode("register"); setError(""); setSuccess(""); }} style={{
-            flex: 1, padding: "7px", borderRadius: 6, border: "none", cursor: "pointer",
-            background: mode === "register" ? "#fff" : "transparent",
-            color: mode === "register" ? "#333" : "#888", fontWeight: mode === "register" ? 500 : 400, fontSize: 13,
-            boxShadow: mode === "register" ? "0 1px 4px rgba(0,0,0,0.1)" : "none"
-          }}>Registrati</button>
+          <button onClick={() => { setMode("login"); setError(""); setSuccess(""); }} style={{ flex: 1, padding: "7px", borderRadius: 6, border: "none", cursor: "pointer", background: mode === "login" ? "#fff" : "transparent", color: mode === "login" ? "#333" : "#888", fontWeight: mode === "login" ? 500 : 400, fontSize: 13, boxShadow: mode === "login" ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>Accedi</button>
+          <button onClick={() => { setMode("register"); setError(""); setSuccess(""); }} style={{ flex: 1, padding: "7px", borderRadius: 6, border: "none", cursor: "pointer", background: mode === "register" ? "#fff" : "transparent", color: mode === "register" ? "#333" : "#888", fontWeight: mode === "register" ? 500 : 400, fontSize: 13, boxShadow: mode === "register" ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>Registrati</button>
         </div>
-
         {error && <p style={{ color: "#A32D2D", fontSize: 13, background: "#FAECE7", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{error}</p>}
         {success && <p style={{ color: "#3B6D11", fontSize: 13, background: "#EAF3DE", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{success}</p>}
-
         {mode === "register" && (
           <>
             <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Nome e Cognome</label>
@@ -337,16 +293,13 @@ function LoginPage({ onLogin }) {
               style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
           </>
         )}
-
         <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Email</label>
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="nome@lab.it" type="email"
           style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-
         <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Password</label>
         <input value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" type="password"
           onKeyDown={e => e.key === "Enter" && (mode === "login" ? login() : register())}
           style={{ width: "100%", marginBottom: 16, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-
         <button onClick={mode === "login" ? login : register} disabled={loading}
           style={{ width: "100%", padding: "10px", borderRadius: 8, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
           {loading ? "Attendere..." : mode === "login" ? "Accedi" : "Richiedi accesso"}
@@ -378,9 +331,7 @@ export default function App() {
         supabase.from("equipment").select("*").order("id"),
         supabase.from("bookings").select("*").order("id"),
       ]);
-      setUsers(u || []);
-      setEquipment(e || []);
-      setBookings(b || []);
+      setUsers(u || []); setEquipment(e || []); setBookings(b || []);
       setLoading(false);
     };
     load();
@@ -398,57 +349,25 @@ export default function App() {
     if (data) setLogs(prev => [data, ...prev]);
   };
 
+  const sendEmail = async (type, details) => {
+    let subject = "", html = "";
+    if (type === "booking_created") {
+      subject = `Nuova prenotazione — ${currentUser.name}`;
+      html = `<h2>Nuova prenotazione</h2><p><b>${currentUser.name}</b> ha prenotato: <b>${details}</b></p>`;
+    } else if (type === "booking_cancelled") {
+      subject = `Prenotazione annullata — ${currentUser.name}`;
+      html = `<h2>Prenotazione annullata</h2><p><b>${currentUser.name}</b> ha annullato: <b>${details}</b></p>`;
+    }
+    await sendEmailDirect(subject, html);
+  };
+
   const logout = async () => {
     await supabase.auth.signOut();
     setCurrentUser(null);
     setUsers([]); setEquipment([]); setBookings([]);
   };
 
-  const sendEmail = async (type, details) => {
-    try {
-      let subject = "";
-      let html = "";
-      if (type === "registration_request") {
-        subject = `Nuova richiesta di registrazione — ${details}`;
-        html = `<h2>Nuova richiesta di registrazione</h2><p><b>${details}</b> ha richiesto l'accesso all'app LTCE.</p><a href="https://luce-apparecchiature.vercel.app">Vai all'app</a>`;
-      } else if (type === "booking_created") {
-        subject = `Nuova prenotazione — ${currentUser.name}`;
-        html = `<h2>Nuova prenotazione</h2><p><b>${currentUser.name}</b> ha prenotato: <b>${details}</b></p>`;
-      } else if (type === "booking_cancelled") {
-        subject = `Prenotazione annullata — ${currentUser.name}`;
-        html = `<h2>Prenotazione annullata</h2><p><b>${currentUser.name}</b> ha annullato: <b>${details}</b></p>`;
-      }
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer re_XvCrYkRE_EgRn41UewFhM5K53m6YmuTPB"
-        },
-        body: JSON.stringify({
-          from: "onboarding@resend.dev",
-          to: "claudia.prestigiacomo01@unipa.it",
-          subject,
-          html
-        })
-      });
-    } catch (err) {
-      console.error("Errore invio email:", err);
-    }
-  };
-
-  const approveUser = async (userId) => {
-    const { error } = await supabase.from("users").update({ status: "approved" }).eq("id", userId);
-    if (error) return alert("Errore: " + error.message);
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: "approved" } : u));
-  };
-
-  const rejectUser = async (userId) => {
-    if (!window.confirm("Vuoi rifiutare e rimuovere questo utente?")) return;
-    await supabase.auth.admin.deleteUser(userId);
-    const { error } = await supabase.from("users").delete().eq("id", userId);
-    if (error) return alert("Errore: " + error.message);
-    setUsers(prev => prev.filter(u => u.id !== userId));
-  };
+  const isBooked = (equipId, day, slot) =>
     bookings.find(b => b.equip_id === equipId && b.day === day && b.slot === slot);
 
   const book = async () => {
@@ -477,7 +396,7 @@ export default function App() {
   const addUser = async () => {
     if (!userForm.name.trim() || !userForm.email.trim()) return alert("Inserisci nome ed email!");
     const { data, error } = await supabase.from("users").insert([{
-      name: userForm.name.trim(), email: userForm.email.trim(), role: userForm.role
+      name: userForm.name.trim(), email: userForm.email.trim(), role: userForm.role, status: "approved"
     }]).select().single();
     if (error) return alert("Errore: " + error.message);
     setUsers(prev => [...prev, data]);
@@ -498,25 +417,34 @@ export default function App() {
     setUsers(prev => prev.map(u => u.id === userId ? { ...u, role } : u));
   };
 
+  const approveUser = async (userId) => {
+    const { error } = await supabase.from("users").update({ status: "approved" }).eq("id", userId);
+    if (error) return alert("Errore: " + error.message);
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: "approved" } : u));
+  };
+
+  const rejectUser = async (userId) => {
+    if (!window.confirm("Vuoi rifiutare e rimuovere questo utente?")) return;
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+    if (error) return alert("Errore: " + error.message);
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
+
   if (!currentUser) return <LoginPage onLogin={setCurrentUser} />;
 
   const myBookings = bookings.filter(b => b.user_id === currentUser.id);
+  const pendingUsers = users.filter(u => u.status === "pending");
 
-  const navBtn = (v, label, icon) => (
-    <button onClick={() => setView(v)} style={{
-      padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer",
-      background: view === v ? "#7F77DD" : "transparent",
-      color: view === v ? "#fff" : "#666",
-      fontWeight: view === v ? 500 : 400, fontSize: 14, display: "flex", alignItems: "center", gap: 6
-    }}>
+  const navBtn = (v, label, icon, badge) => (
+    <button onClick={() => setView(v)} style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === v ? "#7F77DD" : "transparent", color: view === v ? "#fff" : "#666", fontWeight: view === v ? 500 : 400, fontSize: 14, display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
       <i className={`ti ti-${icon}`} aria-hidden="true" style={{ fontSize: 16 }} />{label}
+      {badge > 0 && <span style={{ background: "#A32D2D", color: "#fff", borderRadius: "50%", fontSize: 10, padding: "1px 5px", marginLeft: 2 }}>{badge}</span>}
     </button>
   );
 
   if (loading) return (
     <div style={{ textAlign: "center", padding: "3rem", color: "#666" }}>
-      <i className="ti ti-loader-2" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />
-      Caricamento...
+      <i className="ti ti-loader-2" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />Caricamento...
     </div>
   );
 
@@ -543,7 +471,7 @@ export default function App() {
         {navBtn("calendar", "Calendario", "calendar")}
         {navBtn("mybookings", "Le mie prenotazioni", "bookmark")}
         {navBtn("inventory", "Inventario", "box")}
-        {currentUser.role === "admin" && navBtn("admin", "Admin", "settings")}
+        {currentUser.role === "admin" && navBtn("admin", "Admin", "settings", pendingUsers.length)}
       </div>
 
       {/* CATALOG */}
@@ -584,9 +512,7 @@ export default function App() {
             <thead>
               <tr>
                 <th style={{ padding: "6px 8px", textAlign: "left", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0" }}>Slot</th>
-                {DAYS.map((d, i) => (
-                  <th key={i} style={{ padding: "6px 8px", textAlign: "center", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0", minWidth: 80 }}>{fmt(d)}</th>
-                ))}
+                {DAYS.map((d, i) => <th key={i} style={{ padding: "6px 8px", textAlign: "center", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0", minWidth: 80 }}>{fmt(d)}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -668,13 +594,31 @@ export default function App() {
             ))}
           </div>
 
+          {/* Richieste in attesa */}
+          {pendingUsers.length > 0 && (
+            <div style={{ background: "#FFFBEA", border: "0.5px solid #F0C040", borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: "#856404", margin: "0 0 10px" }}>⏳ Richieste in attesa ({pendingUsers.length})</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {pendingUsers.map(u => (
+                  <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, background: "#fff", padding: "0.7rem 1rem", borderRadius: 8, border: "0.5px solid #F0C040" }}>
+                    <div style={{ flex: 1 }}>
+                      <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{u.name}</p>
+                      <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email}</p>
+                    </div>
+                    <button onClick={() => approveUser(u.id)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#3B6D11", color: "#fff", cursor: "pointer" }}>✓ Approva</button>
+                    <button onClick={() => rejectUser(u.id)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer" }}>✗ Rifiuta</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Gestione utenti */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>Gestione utenti</p>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-            <input value={userForm.name} onChange={e => setUserForm(f => ({ ...f, name: e.target.value }))}
-              placeholder="Nome e cognome"
+            <input value={userForm.name} onChange={e => setUserForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome e cognome"
               style={{ flex: 1, minWidth: 120, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc" }} />
-            <input value={userForm.email} onChange={e => setUserForm(f => ({ ...f, email: e.target.value }))}
-              placeholder="email@lab.it"
+            <input value={userForm.email} onChange={e => setUserForm(f => ({ ...f, email: e.target.value }))} placeholder="email@lab.it"
               style={{ flex: 1, minWidth: 120, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc" }} />
             <select value={userForm.role} onChange={e => setUserForm(f => ({ ...f, role: e.target.value }))}
               style={{ fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
@@ -687,41 +631,29 @@ export default function App() {
             </button>
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
-            {users.map(u => (
-              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1rem", background: u.status === "pending" ? "#FFFBEA" : "#fff", border: `0.5px solid ${u.status === "pending" ? "#F0C040" : "#e0e0e0"}`, borderRadius: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.status === "pending" ? "#FFF3CD" : "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: u.status === "pending" ? "#856404" : "#534AB7" }}>
+            {users.filter(u => u.status !== "pending").map(u => (
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#534AB7" }}>
                   {u.name.split(" ").map(n => n[0]).join("").slice(0,2)}
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{u.name}</p>
-                  <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email} {u.status === "pending" && <span style={{ color: "#856404", fontWeight: 500 }}>· In attesa di approvazione</span>}</p>
+                  <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email}</p>
                 </div>
-                {u.status === "pending" ? (
-                  <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => approveUser(u.id)} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "none", background: "#3B6D11", color: "#fff", cursor: "pointer" }}>
-                      ✓ Approva
-                    </button>
-                    <button onClick={() => rejectUser(u.id)} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer" }}>
-                      ✗ Rifiuta
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
-                      style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
-                      <option value="researcher">Ricercatore</option>
-                      <option value="technician">Tecnico</option>
-                      <option value="admin">Admin</option>
-                    </select>
-                    <button onClick={() => removeUser(u.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>
-                      <i className="ti ti-trash" style={{ fontSize: 13 }} />
-                    </button>
-                  </>
-                )}
+                <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
+                  style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                  <option value="researcher">Ricercatore</option>
+                  <option value="technician">Tecnico</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button onClick={() => removeUser(u.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>
+                  <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                </button>
               </div>
             ))}
           </div>
 
+          {/* Cronologia */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>📋 Cronologia azioni</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
             {logs.length === 0
@@ -744,6 +676,7 @@ export default function App() {
             }
           </div>
 
+          {/* Tutte le prenotazioni */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", marginBottom: 8 }}>Tutte le prenotazioni</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {bookings.map(b => {
