@@ -436,7 +436,19 @@ export default function App() {
     }
   };
 
-  const isBooked = (equipId, day, slot) =>
+  const approveUser = async (userId) => {
+    const { error } = await supabase.from("users").update({ status: "approved" }).eq("id", userId);
+    if (error) return alert("Errore: " + error.message);
+    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: "approved" } : u));
+  };
+
+  const rejectUser = async (userId) => {
+    if (!window.confirm("Vuoi rifiutare e rimuovere questo utente?")) return;
+    await supabase.auth.admin.deleteUser(userId);
+    const { error } = await supabase.from("users").delete().eq("id", userId);
+    if (error) return alert("Errore: " + error.message);
+    setUsers(prev => prev.filter(u => u.id !== userId));
+  };
     bookings.find(b => b.equip_id === equipId && b.day === day && b.slot === slot);
 
   const book = async () => {
@@ -676,23 +688,36 @@ export default function App() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {users.map(u => (
-              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#534AB7" }}>
+              <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1rem", background: u.status === "pending" ? "#FFFBEA" : "#fff", border: `0.5px solid ${u.status === "pending" ? "#F0C040" : "#e0e0e0"}`, borderRadius: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: u.status === "pending" ? "#FFF3CD" : "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: u.status === "pending" ? "#856404" : "#534AB7" }}>
                   {u.name.split(" ").map(n => n[0]).join("").slice(0,2)}
                 </div>
                 <div style={{ flex: 1 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{u.name}</p>
-                  <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email}</p>
+                  <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email} {u.status === "pending" && <span style={{ color: "#856404", fontWeight: 500 }}>· In attesa di approvazione</span>}</p>
                 </div>
-                <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
-                  style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
-                  <option value="researcher">Ricercatore</option>
-                  <option value="technician">Tecnico</option>
-                  <option value="admin">Admin</option>
-                </select>
-                <button onClick={() => removeUser(u.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>
-                  <i className="ti ti-trash" style={{ fontSize: 13 }} />
-                </button>
+                {u.status === "pending" ? (
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button onClick={() => approveUser(u.id)} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "none", background: "#3B6D11", color: "#fff", cursor: "pointer" }}>
+                      ✓ Approva
+                    </button>
+                    <button onClick={() => rejectUser(u.id)} style={{ fontSize: 12, padding: "4px 10px", borderRadius: 6, border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer" }}>
+                      ✗ Rifiuta
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
+                      style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                      <option value="researcher">Ricercatore</option>
+                      <option value="technician">Tecnico</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button onClick={() => removeUser(u.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>
+                      <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                    </button>
+                  </>
+                )}
               </div>
             ))}
           </div>
