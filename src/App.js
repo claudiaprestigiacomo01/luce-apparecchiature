@@ -95,16 +95,20 @@ function InventoryPage({ currentUser, supabase }) {
     return STATUS.available;
   };
 
-  const reagenti = items.filter(i => i.category === "Reagente");
-  const bombole = items.filter(i => i.category === "Bombola");
+  const [search, setSearch] = useState("");
+  const filtered = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase()));
+  const reagenti = filtered.filter(i => i.category === "Reagente");
+  const bombole = filtered.filter(i => i.category === "Bombola");
 
   if (loading) return <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>Caricamento...</div>;
 
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Gestione magazzino reagenti e bombole</p>
-        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "6px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer" }}>
+        <input value={search} onChange={e => setSearch(e.target.value)}
+          placeholder="🔍 Cerca reagente o bombola..."
+          style={{ flex: 1, fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc", marginRight: 12 }} />
+        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
       </div>
