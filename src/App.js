@@ -110,6 +110,20 @@ export default function App() {
     setUsers([]); setEquipment([]); setBookings([]);
   };
 
+  const [logs, setLogs] = useState([]);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== "admin") return;
+    supabase.from("logs").select("*").order("created_at", { ascending: false }).limit(50)
+      .then(({ data }) => setLogs(data || []));
+  }, [currentUser]);
+
+  const addLog = async (action, equipName, details) => {
+    const entry = { action, user_name: currentUser.name, equipment_name: equipName || null, details: details || null };
+    const { data } = await supabase.from("logs").insert([entry]).select().single();
+    if (data) setLogs(prev => [data, ...prev]);
+  };
+
   const isBooked = (equipId, day, slot) =>
     bookings.find(b => b.equip_id === equipId && b.day === day && b.slot === slot);
 
@@ -121,6 +135,7 @@ export default function App() {
     }]).select().single();
     if (error) return alert("Errore: " + error.message);
     setBookings(prev => [...prev, data]);
+    await addLog("Prenotazione creata", modal.name, `${fmt(DAYS[form.day])} · ${SLOTS[form.slot]}`);
     setModal(null);
   };
 
@@ -129,6 +144,8 @@ export default function App() {
     if (b.user_id !== currentUser.id && currentUser.role !== "admin") return alert("Non puoi annullare prenotazioni altrui!");
     const { error } = await supabase.from("bookings").delete().eq("id", bookingId);
     if (error) return alert("Errore: " + error.message);
+    const eq = equipment.find(e => e.id === b.equip_id);
+    await addLog("Prenotazione annullata", eq?.name, `${fmt(DAYS[b.day])} · ${SLOTS[b.slot]}`);
     setBookings(prev => prev.filter(x => x.id !== bookingId));
   };
 
@@ -359,6 +376,29 @@ export default function App() {
                 </button>
               </div>
             ))}
+          </div>
+
+          {/* Cronologia */}
+          <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>📋 Cronologia azioni</p>
+          <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
+            {logs.length === 0
+              ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessuna azione registrata</p>
+              : logs.map(l => (
+                <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
+                  <i className={`ti ti-${l.action.includes("creata") ? "calendar-plus" : l.action.includes("annullata") ? "calendar-minus" : "user"}`}
+                    style={{ fontSize: 16, color: l.action.includes("creata") ? "#3B6D11" : l.action.includes("annullata") ? "#A32D2D" : "#7F77DD" }} />
+                  <div style={{ flex: 1 }}>
+                    <span style={{ fontSize: 13, fontWeight: 500 }}>{l.action}</span>
+                    {l.equipment_name && <span style={{ fontSize: 12, color: "#888", marginLeft: 6 }}>— {l.equipment_name}</span>}
+                    {l.details && <span style={{ fontSize: 12, color: "#aaa", marginLeft: 6 }}>{l.details}</span>}
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{l.user_name}</p>
+                    <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{new Date(l.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
+                  </div>
+                </div>
+              ))
+            }
           </div>
 
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", marginBottom: 8 }}>Tutte le prenotazioni</p>
