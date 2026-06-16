@@ -1,21 +1,17 @@
-// App.js — LabBook con autenticazione Supabase
-// npm install @supabase/supabase-js
-
+// App.js — LTCE con Supabase
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 
 const SUPABASE_URL = "https://bmmoqcdtrehtcgxzbhth.supabase.co";
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJtbW9xY2R0cmVodGNneHpiaHRoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEyNTUzNjMsImV4cCI6MjA5NjgzMTM2M30.ya0MRCMioCQmnJWCKEEF0njM3E1VJYgISqhGDIPfofc";
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true }
+});
 
 const SLOTS = ["08:00–10:00","10:00–12:00","12:00–14:00","14:00–16:00","16:00–18:00"];
 const today = new Date();
 const fmt = (d) => d.toLocaleDateString("it-IT", { weekday: "short", day: "2-digit", month: "short" });
-const DAYS = Array.from({ length: 7 }, (_, i) => {
-  const d = new Date(today);
-  d.setDate(today.getDate() + i);
-  return d;
-});
+const DAYS = Array.from({ length: 7 }, (_, i) => { const d = new Date(today); d.setDate(today.getDate() + i); return d; });
 
 const STATUS_STYLE = {
   available: { bg: "#EAF3DE", color: "#3B6D11", label: "Disponibile" },
@@ -23,19 +19,17 @@ const STATUS_STYLE = {
 };
 
 const CAT_COLORS = {
-  "Cromatografia": "#7F77DD",
-  "Ottica": "#178BCA",
-  "Analisi elementare": "#1D9E75",
-  "Biologia Molecolare": "#1D9E75",
-  "Imaging": "#D4537E",
-  "Pesatura": "#888780",
+  "Cromatografia": "#7F77DD", "Ottica": "#178BCA", "Analisi elementare": "#1D9E75",
+  "Biologia Molecolare": "#1D9E75", "Imaging": "#D4537E", "Pesatura": "#888780",
 };
 
-// INVENTARIO
-function InventoryPage({ currentUser, supabase }) {
+// ─── INVENTARIO ───────────────────────────────────────────────────────────────
+function InventoryPage({ currentUser }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // 'add', 'load', 'unload'
+  const [tab, setTab] = useState("reagenti");
+  const [search, setSearch] = useState("");
+  const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
   const [amount, setAmount] = useState("");
@@ -47,37 +41,11 @@ function InventoryPage({ currentUser, supabase }) {
     });
   }, []);
 
-  const addItem = async () => {
-    if (!form.name.trim()) return alert("Inserisci il nome!");
-    const { data, error } = await supabase.from("inventory").insert([{ ...form, quantity: +form.quantity, min_quantity: +form.min_quantity, updated_by: currentUser.name }]).select().single();
-    if (error) return alert("Errore: " + error.message);
-    setItems(prev => [...prev, data]);
-    setModal(null);
-    setForm({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
-  };
-
-  const updateQuantity = async (type) => {
-    const delta = type === "load" ? +amount : -amount;
-    const newQty = Math.max(0, selected.quantity + delta);
-    const newStatus = newQty === 0 ? "exhausted" : selected.category === "Bombola" ? selected.status : "available";
-    const { data, error } = await supabase.from("inventory").update({ quantity: newQty, status: newStatus, updated_by: currentUser.name, updated_at: new Date() }).eq("id", selected.id).select().single();
-    if (error) return alert("Errore: " + error.message);
-    setItems(prev => prev.map(i => i.id === selected.id ? data : i));
-    setModal(null);
-    setAmount("");
-  };
-
-  const updateStatus = async (id, status) => {
-    const { data, error } = await supabase.from("inventory").update({ status, updated_by: currentUser.name, updated_at: new Date() }).eq("id", id).select().single();
-    if (error) return alert("Errore: " + error.message);
-    setItems(prev => prev.map(i => i.id === id ? data : i));
-  };
-
-  const deleteItem = async (id) => {
-    if (!window.confirm("Vuoi eliminare questo elemento?")) return;
-    await supabase.from("inventory").delete().eq("id", id);
-    setItems(prev => prev.filter(i => i.id !== id));
-  };
+  const filtered = items.filter(i => {
+    const matchTab = tab === "reagenti" ? i.category === "Reagente" : i.category === "Bombola";
+    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase());
+    return matchTab && matchSearch;
+  });
 
   const STATUS = {
     available: { bg: "#EAF3DE", color: "#3B6D11", label: "Disponibile" },
@@ -95,15 +63,43 @@ function InventoryPage({ currentUser, supabase }) {
     return STATUS.available;
   };
 
-  const [search, setSearch] = useState("");
-  const [tab, setTab] = useState("reagenti");
-  const filtered = items.filter(i => {
-    const matchTab = tab === "reagenti" ? i.category === "Reagente" : i.category === "Bombola";
-    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase());
-    return matchTab && matchSearch;
-  });
-  const reagenti = filtered.filter(i => i.category === "Reagente");
-  const bombole = filtered.filter(i => i.category === "Bombola");
+  const addItem = async () => {
+    if (!form.name.trim()) return alert("Inserisci il nome!");
+    const { data, error } = await supabase.from("inventory").insert([{
+      ...form, quantity: +form.quantity, min_quantity: +form.min_quantity, updated_by: currentUser.name
+    }]).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => [...prev, data]);
+    setModal(null);
+    setForm({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
+  };
+
+  const updateQuantity = async (type) => {
+    const delta = type === "load" ? +amount : -amount;
+    const newQty = Math.max(0, selected.quantity + delta);
+    const newStatus = newQty === 0 ? "exhausted" : "available";
+    const { data, error } = await supabase.from("inventory").update({
+      quantity: newQty, status: newStatus, updated_by: currentUser.name, updated_at: new Date()
+    }).eq("id", selected.id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => prev.map(i => i.id === selected.id ? data : i));
+    setModal(null);
+    setAmount("");
+  };
+
+  const updateStatus = async (id, status) => {
+    const { data, error } = await supabase.from("inventory").update({
+      status, updated_by: currentUser.name, updated_at: new Date()
+    }).eq("id", id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => prev.map(i => i.id === id ? data : i));
+  };
+
+  const deleteItem = async (id) => {
+    if (!window.confirm("Vuoi eliminare questo elemento?")) return;
+    await supabase.from("inventory").delete().eq("id", id);
+    setItems(prev => prev.filter(i => i.id !== id));
+  };
 
   if (loading) return <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>Caricamento...</div>;
 
@@ -116,83 +112,79 @@ function InventoryPage({ currentUser, supabase }) {
           background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0",
           color: tab === "reagenti" ? "#fff" : "#555",
           fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14
-        }}>
-          🧪 Reagenti
-        </button>
+        }}>🧪 Reagenti</button>
         <button onClick={() => setTab("bombole")} style={{
           flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer",
           background: tab === "bombole" ? "#178BCA" : "#f0f0f0",
           color: tab === "bombole" ? "#fff" : "#555",
           fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14
-        }}>
-          🫧 Bombole Gas
-        </button>
+        }}>🫧 Bombole Gas</button>
       </div>
 
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      {/* Search + Aggiungi */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
-          placeholder="🔍 Cerca reagente o bombola..."
-          style={{ flex: 1, fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc", marginRight: 12 }} />
-        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
+          placeholder="🔍 Cerca..."
+          style={{ flex: 1, fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc" }} />
+        <button onClick={() => setModal("add")} style={{
+          fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none",
+          background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap"
+        }}>
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
       </div>
 
       {/* Lista */}
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-        {filtered.map(item => {
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            {data.length === 0
-              ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun elemento</p>
-              : data.map(item => {
-                  const st = getStatus(item);
-                  return (
-                    <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 10 }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
-                          <span style={{ fontWeight: 500, fontSize: 14 }}>{item.name}</span>
-                          <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{st.label}</span>
-                        </div>
-                        <div style={{ fontSize: 12, color: "#888" }}>
-                          {item.category === "Reagente"
-                            ? <>Quantità: <b>{item.quantity} {item.unit}</b> {item.min_quantity > 0 && `(min: ${item.min_quantity} ${item.unit})`}</>
-                            : <>Stato bombola</>
-                          }
-                          {item.notes && <span style={{ color: "#aaa", marginLeft: 8 }}>· {item.notes}</span>}
-                        </div>
-                        {item.updated_by && <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>Aggiornato da {item.updated_by}</div>}
-                      </div>
-                      <div style={{ display: "flex", gap: 6 }}>
-                        {tab === "reagenti" ? (
-                          <>
-                            <button onClick={() => { setSelected(item); setModal("load"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #3B6D11", color: "#3B6D11", background: "transparent", cursor: "pointer" }}>
-                              <i className="ti ti-arrow-up" style={{ fontSize: 13, verticalAlign: -2 }} /> Carica
-                            </button>
-                            <button onClick={() => { setSelected(item); setModal("unload"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #854F0B", color: "#854F0B", background: "transparent", cursor: "pointer" }}>
-                              <i className="ti ti-arrow-down" style={{ fontSize: 13, verticalAlign: -2 }} /> Scarica
-                            </button>
-                          </>
-                        ) : (
-                          <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
-                            style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
-                            <option value="full">Piena</option>
-                            <option value="partial">Parziale</option>
-                            <option value="empty">Vuota</option>
-                          </select>
-                        )}
-                        {currentUser.role === "admin" && (
-                          <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
-                            <i className="ti ti-trash" style={{ fontSize: 13 }} />
-                          </button>
-                        )}
-                      </div>
+        {filtered.length === 0
+          ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun elemento trovato</p>
+          : filtered.map(item => {
+              const st = getStatus(item);
+              return (
+                <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 10 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                      <span style={{ fontWeight: 500, fontSize: 14 }}>{item.name}</span>
+                      <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{st.label}</span>
                     </div>
-                  );
-                })
-            }
-          </div>
-        </div>
-      ))}
+                    <div style={{ fontSize: 12, color: "#888" }}>
+                      {item.category === "Reagente"
+                        ? <span>Quantità: <b>{item.quantity} {item.unit}</b>{item.min_quantity > 0 ? ` (min: ${item.min_quantity} ${item.unit})` : ""}</span>
+                        : <span>Stato bombola</span>
+                      }
+                      {item.notes && <span style={{ color: "#aaa", marginLeft: 8 }}>· {item.notes}</span>}
+                    </div>
+                    {item.updated_by && <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>Aggiornato da {item.updated_by}</div>}
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    {item.category === "Reagente" ? (
+                      <>
+                        <button onClick={() => { setSelected(item); setModal("load"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #3B6D11", color: "#3B6D11", background: "transparent", cursor: "pointer" }}>
+                          <i className="ti ti-arrow-up" style={{ fontSize: 13, verticalAlign: -2 }} /> Carica
+                        </button>
+                        <button onClick={() => { setSelected(item); setModal("unload"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #854F0B", color: "#854F0B", background: "transparent", cursor: "pointer" }}>
+                          <i className="ti ti-arrow-down" style={{ fontSize: 13, verticalAlign: -2 }} /> Scarica
+                        </button>
+                      </>
+                    ) : (
+                      <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
+                        style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                        <option value="full">Piena</option>
+                        <option value="partial">Parziale</option>
+                        <option value="empty">Vuota</option>
+                      </select>
+                    )}
+                    {currentUser.role === "admin" && (
+                      <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
+                        <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+        }
+      </div>
 
       {/* MODAL AGGIUNGI */}
       {modal === "add" && (
@@ -239,12 +231,12 @@ function InventoryPage({ currentUser, supabase }) {
             </div>
             <p style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>Quantità attuale: <b>{selected.quantity} {selected.unit}</b></p>
             <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Quantità da {modal === "load" ? "aggiungere" : "rimuovere"}</label>
-            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0"
-              placeholder="0"
+            <input type="number" value={amount} onChange={e => setAmount(e.target.value)} min="0" placeholder="0"
               style={{ width: "100%", marginBottom: 14, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-            <button onClick={() => updateQuantity(modal)} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: modal === "load" ? "#3B6D11" : "#854F0B", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
-              Conferma
-            </button>
+            <button onClick={() => updateQuantity(modal)} style={{
+              width: "100%", padding: "9px", borderRadius: 8, border: "none",
+              background: modal === "load" ? "#3B6D11" : "#854F0B", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer"
+            }}>Conferma</button>
           </div>
         </div>
       )}
@@ -252,7 +244,7 @@ function InventoryPage({ currentUser, supabase }) {
   );
 }
 
-// LOGIN
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -262,7 +254,7 @@ function LoginPage({ onLogin }) {
   const login = async () => {
     setLoading(true);
     setError("");
-    const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
     if (authError) { setError("Email o password errati."); setLoading(false); return; }
     const { data: userData } = await supabase.from("users").select("*").eq("email", email).single();
     onLogin(userData);
@@ -279,12 +271,10 @@ function LoginPage({ onLogin }) {
         </div>
         {error && <p style={{ color: "#A32D2D", fontSize: 13, background: "#FAECE7", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{error}</p>}
         <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Email</label>
-        <input value={email} onChange={e => setEmail(e.target.value)}
-          placeholder="nome@lab.it" type="email"
+        <input value={email} onChange={e => setEmail(e.target.value)} placeholder="nome@lab.it" type="email"
           style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
         <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Password</label>
-        <input value={password} onChange={e => setPassword(e.target.value)}
-          placeholder="••••••••" type="password"
+        <input value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" type="password"
           onKeyDown={e => e.key === "Enter" && login()}
           style={{ width: "100%", marginBottom: 16, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
         <button onClick={login} disabled={loading}
@@ -296,13 +286,14 @@ function LoginPage({ onLogin }) {
   );
 }
 
-// APP PRINCIPALE
+// ─── APP PRINCIPALE ───────────────────────────────────────────────────────────
 export default function App() {
   const [view, setView] = useState("catalog");
   const [currentUser, setCurrentUser] = useState(null);
   const [users, setUsers] = useState([]);
   const [equipment, setEquipment] = useState([]);
   const [bookings, setBookings] = useState([]);
+  const [logs, setLogs] = useState([]);
   const [modal, setModal] = useState(null);
   const [form, setForm] = useState({ day: 0, slot: 0, note: "" });
   const [userForm, setUserForm] = useState({ name: "", email: "", role: "researcher" });
@@ -325,14 +316,6 @@ export default function App() {
     load();
   }, [currentUser]);
 
-  const logout = async () => {
-    await supabase.auth.signOut();
-    setCurrentUser(null);
-    setUsers([]); setEquipment([]); setBookings([]);
-  };
-
-  const [logs, setLogs] = useState([]);
-
   useEffect(() => {
     if (!currentUser || currentUser.role !== "admin") return;
     supabase.from("logs").select("*").order("created_at", { ascending: false }).limit(50)
@@ -345,14 +328,19 @@ export default function App() {
     if (data) setLogs(prev => [data, ...prev]);
   };
 
+  const logout = async () => {
+    await supabase.auth.signOut();
+    setCurrentUser(null);
+    setUsers([]); setEquipment([]); setBookings([]);
+  };
+
   const isBooked = (equipId, day, slot) =>
     bookings.find(b => b.equip_id === equipId && b.day === day && b.slot === slot);
 
   const book = async () => {
     if (isBooked(modal.id, form.day, form.slot)) return alert("Slot già occupato!");
     const { data, error } = await supabase.from("bookings").insert([{
-      equip_id: modal.id, user_id: currentUser.id,
-      day: form.day, slot: form.slot, note: form.note
+      equip_id: modal.id, user_id: currentUser.id, day: form.day, slot: form.slot, note: form.note
     }]).select().single();
     if (error) return alert("Errore: " + error.message);
     setBookings(prev => [...prev, data]);
@@ -372,7 +360,9 @@ export default function App() {
 
   const addUser = async () => {
     if (!userForm.name.trim() || !userForm.email.trim()) return alert("Inserisci nome ed email!");
-    const { data, error } = await supabase.from("users").insert([{ name: userForm.name.trim(), email: userForm.email.trim(), role: userForm.role }]).select().single();
+    const { data, error } = await supabase.from("users").insert([{
+      name: userForm.name.trim(), email: userForm.email.trim(), role: userForm.role
+    }]).select().single();
     if (error) return alert("Errore: " + error.message);
     setUsers(prev => [...prev, data]);
     setUserForm({ name: "", email: "", role: "researcher" });
@@ -544,7 +534,7 @@ export default function App() {
       )}
 
       {/* INVENTORY */}
-      {view === "inventory" && <InventoryPage currentUser={currentUser} supabase={supabase} />}
+      {view === "inventory" && <InventoryPage currentUser={currentUser} />}
 
       {/* ADMIN */}
       {view === "admin" && currentUser.role === "admin" && (
@@ -603,15 +593,14 @@ export default function App() {
             ))}
           </div>
 
-          {/* Cronologia */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>📋 Cronologia azioni</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
             {logs.length === 0
               ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessuna azione registrata</p>
               : logs.map(l => (
                 <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
-                  <i className={`ti ti-${l.action.includes("creata") ? "calendar-plus" : l.action.includes("annullata") ? "calendar-minus" : "user"}`}
-                    style={{ fontSize: 16, color: l.action.includes("creata") ? "#3B6D11" : l.action.includes("annullata") ? "#A32D2D" : "#7F77DD" }} />
+                  <i className={`ti ti-${l.action.includes("creata") ? "calendar-plus" : "calendar-minus"}`}
+                    style={{ fontSize: 16, color: l.action.includes("creata") ? "#3B6D11" : "#A32D2D" }} />
                   <div style={{ flex: 1 }}>
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{l.action}</span>
                     {l.equipment_name && <span style={{ fontSize: 12, color: "#888", marginLeft: 6 }}>— {l.equipment_name}</span>}
@@ -649,7 +638,7 @@ export default function App() {
       )}
 
       {/* MODAL PRENOTAZIONE */}
-      {modal && (
+      {modal && modal.id && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 340, maxWidth: "90vw", border: "0.5px solid #ddd" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
