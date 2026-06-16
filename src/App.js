@@ -267,7 +267,7 @@ function LoginPage({ onLogin }) {
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <i className="ti ti-flask" style={{ fontSize: 36, color: "#7F77DD" }} />
           <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 600 }}>LTCE</h2>
-          <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Accedi al sistema di prenotazione</p>
+          <p style={{ fontSize: 13, color: "#888", margin: 0 }}>Accedi</p>
         </div>
         {error && <p style={{ color: "#A32D2D", fontSize: 13, background: "#FAECE7", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{error}</p>}
         <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Email</label>
