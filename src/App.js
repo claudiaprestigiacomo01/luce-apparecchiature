@@ -96,7 +96,12 @@ function InventoryPage({ currentUser, supabase }) {
   };
 
   const [search, setSearch] = useState("");
-  const filtered = items.filter(i => i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase()));
+  const [tab, setTab] = useState("reagenti");
+  const filtered = items.filter(i => {
+    const matchTab = tab === "reagenti" ? i.category === "Reagente" : i.category === "Bombola";
+    const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase());
+    return matchTab && matchSearch;
+  });
   const reagenti = filtered.filter(i => i.category === "Reagente");
   const bombole = filtered.filter(i => i.category === "Bombola");
 
@@ -104,6 +109,26 @@ function InventoryPage({ currentUser, supabase }) {
 
   return (
     <div>
+      {/* Tab buttons */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+        <button onClick={() => setTab("reagenti")} style={{
+          flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer",
+          background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0",
+          color: tab === "reagenti" ? "#fff" : "#555",
+          fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14
+        }}>
+          🧪 Reagenti
+        </button>
+        <button onClick={() => setTab("bombole")} style={{
+          flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer",
+          background: tab === "bombole" ? "#178BCA" : "#f0f0f0",
+          color: tab === "bombole" ? "#fff" : "#555",
+          fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14
+        }}>
+          🫧 Bombole Gas
+        </button>
+      </div>
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
         <input value={search} onChange={e => setSearch(e.target.value)}
           placeholder="🔍 Cerca reagente o bombola..."
@@ -113,9 +138,9 @@ function InventoryPage({ currentUser, supabase }) {
         </button>
       </div>
 
-      {[{ label: "🧪 Reagenti", data: reagenti }, { label: "🫧 Bombole", data: bombole }].map(({ label, data }) => (
-        <div key={label} style={{ marginBottom: 24 }}>
-          <p style={{ fontSize: 13, fontWeight: 500, color: "#555", marginBottom: 8 }}>{label}</p>
+      {/* Lista */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {filtered.map(item => {
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {data.length === 0
               ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun elemento</p>
@@ -138,7 +163,7 @@ function InventoryPage({ currentUser, supabase }) {
                         {item.updated_by && <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>Aggiornato da {item.updated_by}</div>}
                       </div>
                       <div style={{ display: "flex", gap: 6 }}>
-                        {item.category === "Reagente" ? (
+                        {tab === "reagenti" ? (
                           <>
                             <button onClick={() => { setSelected(item); setModal("load"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #3B6D11", color: "#3B6D11", background: "transparent", cursor: "pointer" }}>
                               <i className="ti ti-arrow-up" style={{ fontSize: 13, verticalAlign: -2 }} /> Carica
