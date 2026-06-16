@@ -244,7 +244,6 @@ function InventoryPage({ currentUser }) {
   );
 }
 
-
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }) {
   const [mode, setMode] = useState("login"); // "login" | "register"
@@ -285,10 +284,18 @@ function LoginPage({ onLogin }) {
     if (dbError) { setError("Errore: " + dbError.message); setLoading(false); return; }
 
     // Invia email all'admin
-    await fetch("/api/send-email", {
+    await fetch("https://api.resend.com/emails", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "registration_request", userName: name, userEmail: email })
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer re_XvCrYkRE_EgRn41UewFhM5K53m6YmuTPB"
+      },
+      body: JSON.stringify({
+        from: "onboarding@resend.dev",
+        to: "claudia.prestigiacomo01@unipa.it",
+        subject: `Nuova richiesta di registrazione — ${name}`,
+        html: `<h2>Nuova richiesta di registrazione</h2><p><b>${name}</b> (${email}) ha richiesto l'accesso all'app LTCE.</p><a href="https://luce-apparecchiature.vercel.app" style="background:#7F77DD;color:#fff;padding:10px 20px;border-radius:8px;text-decoration:none;">Vai all'app</a>`
+      })
     });
 
     setSuccess("Richiesta inviata! L'admin riceverà una notifica e approverà il tuo accesso.");
@@ -396,22 +403,39 @@ export default function App() {
     setCurrentUser(null);
     setUsers([]); setEquipment([]); setBookings([]);
   };
-const sendEmail = async (type, details) => {
+
+  const sendEmail = async (type, details) => {
     try {
-      await fetch("/api/send-email", {
+      let subject = "";
+      let html = "";
+      if (type === "registration_request") {
+        subject = `Nuova richiesta di registrazione — ${details}`;
+        html = `<h2>Nuova richiesta di registrazione</h2><p><b>${details}</b> ha richiesto l'accesso all'app LTCE.</p><a href="https://luce-apparecchiature.vercel.app">Vai all'app</a>`;
+      } else if (type === "booking_created") {
+        subject = `Nuova prenotazione — ${currentUser.name}`;
+        html = `<h2>Nuova prenotazione</h2><p><b>${currentUser.name}</b> ha prenotato: <b>${details}</b></p>`;
+      } else if (type === "booking_cancelled") {
+        subject = `Prenotazione annullata — ${currentUser.name}`;
+        html = `<h2>Prenotazione annullata</h2><p><b>${currentUser.name}</b> ha annullato: <b>${details}</b></p>`;
+      }
+      await fetch("https://api.resend.com/emails", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer re_XvCrYkRE_EgRn41UewFhM5K53m6YmuTPB"
+        },
         body: JSON.stringify({
-          type,
-          userName: currentUser.name,
-          userEmail: currentUser.email,
-          bookingDetails: details || ""
+          from: "onboarding@resend.dev",
+          to: "claudia.prestigiacomo01@unipa.it",
+          subject,
+          html
         })
       });
     } catch (err) {
       console.error("Errore invio email:", err);
     }
   };
+
   const isBooked = (equipId, day, slot) =>
     bookings.find(b => b.equip_id === equipId && b.day === day && b.slot === slot);
 
