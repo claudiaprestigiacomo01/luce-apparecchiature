@@ -523,6 +523,77 @@ function PresenzeePage({ currentUser }) {
   );
 }
 
+// ─── PRESENZE CRONOLOGIA ADMIN ────────────────────────────────────────────────
+function PresenzeCronologia() {
+  const [presenze, setPresenze] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filterDate, setFilterDate] = useState("");
+  const [filterUser, setFilterUser] = useState("");
+  const [users, setUsers] = useState([]);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("presenze").select("*").order("data", { ascending: false }).order("ora_inizio"),
+      supabase.from("users").select("id, name").order("name")
+    ]).then(([{ data: p }, { data: u }]) => {
+      setPresenze(p || []);
+      setUsers(u || []);
+      setLoading(false);
+    });
+  }, []);
+
+  const filtered = presenze.filter(p => {
+    const matchDate = !filterDate || p.data === filterDate;
+    const matchUser = !filterUser || p.user_name.toLowerCase().includes(filterUser.toLowerCase());
+    return matchDate && matchUser;
+  });
+
+  const fmtDate = (d) => new Date(d + "T00:00:00").toLocaleDateString("it-IT", { day: "2-digit", month: "short", year: "numeric" });
+
+  if (loading) return <div style={{ color: "#888", fontSize: 13 }}>Caricamento...</div>;
+
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+          style={{ flex: 1, fontSize: 13, padding: "6px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 130 }} />
+        <select value={filterUser} onChange={e => setFilterUser(e.target.value)}
+          style={{ flex: 1, fontSize: 13, padding: "6px 8px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 130 }}>
+          <option value="">👤 Tutti gli utenti</option>
+          {users.map(u => <option key={u.id} value={u.name}>{u.name}</option>)}
+        </select>
+        {(filterDate || filterUser) && (
+          <button onClick={() => { setFilterDate(""); setFilterUser(""); }}
+            style={{ fontSize: 12, padding: "6px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
+            ✕ Reset
+          </button>
+        )}
+      </div>
+
+      {filtered.length === 0
+        ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessuna presenza trovata</p>
+        : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+            {filtered.map(p => (
+              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#534AB7", flexShrink: 0 }}>
+                  {p.user_name.split(" ").map(n => n[0]).join("").slice(0,2)}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <p style={{ fontWeight: 500, fontSize: 13, margin: 0 }}>{p.user_name}</p>
+                  <p style={{ fontSize: 12, color: "#888", margin: "2px 0 0" }}>
+                    📅 {fmtDate(p.data)} · 🕐 {p.ora_inizio?.slice(0,5)}–{p.ora_fine?.slice(0,5)}
+                    {p.attivita && <span style={{ color: "#aaa" }}> · {p.attivita}</span>}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+      }
+      <p style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>{filtered.length} presenze trovate</p>
+    </div>
+  );
+}
+
 // ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }) {
   const [mode, setMode] = useState("login");
