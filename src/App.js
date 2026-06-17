@@ -43,6 +43,7 @@ function InventoryPage({ currentUser }) {
   const [tab, setTab] = useState("reagenti");
   const [search, setSearch] = useState("");
   const [filterLocation, setFilterLocation] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", location: "", notes: "" });
@@ -59,7 +60,8 @@ function InventoryPage({ currentUser }) {
     const matchTab = tab === "reagenti" ? i.category === "Reagente" : i.category === "Bombola";
     const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase());
     const matchLocation = !filterLocation || (i.location || "") === filterLocation || (i.notes || "").toLowerCase().includes(filterLocation.toLowerCase());
-    return matchTab && matchSearch && matchLocation;
+    const matchStatus = !filterStatus || i.status === filterStatus;
+    return matchTab && matchSearch && matchLocation && matchStatus;
   });
 
   const STATUS = {
@@ -158,6 +160,15 @@ function InventoryPage({ currentUser }) {
             </>
           )}
         </select>
+        {tab === "bombole" && (
+          <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+            style={{ fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc" }}>
+            <option value="">🔵 Tutti gli stati</option>
+            <option value="full">Piena</option>
+            <option value="partial">Parziale</option>
+            <option value="empty">Vuota</option>
+          </select>
+        )}
         <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
