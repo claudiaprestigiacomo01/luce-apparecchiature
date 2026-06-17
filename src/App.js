@@ -108,6 +108,14 @@ function InventoryPage({ currentUser }) {
     setItems(prev => prev.map(i => i.id === id ? data : i));
   };
 
+  const updateLocation = async (id, location) => {
+    const { data, error } = await supabase.from("inventory").update({
+      location, updated_by: currentUser.name, updated_at: new Date()
+    }).eq("id", id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setItems(prev => prev.map(i => i.id === id ? data : i));
+  };
+
   const deleteItem = async (id) => {
     if (!window.confirm("Vuoi eliminare questo elemento?")) return;
     await supabase.from("inventory").delete().eq("id", id);
@@ -162,12 +170,23 @@ function InventoryPage({ currentUser }) {
                         </button>
                       </>
                     ) : (
-                      <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
-                        style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
-                        <option value="full">Piena</option>
-                        <option value="partial">Parziale</option>
-                        <option value="empty">Vuota</option>
-                      </select>
+                      <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                        <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
+                          style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                          <option value="full">Piena</option>
+                          <option value="partial">Parziale</option>
+                          <option value="empty">Vuota</option>
+                        </select>
+                        <select value={item.location || ""} onChange={e => updateLocation(item.id, e.target.value)}
+                          style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                          <option value="">📍 Posizione</option>
+                          <option value="gabbiotto_inerti">Gabbiotto Inerti</option>
+                          <option value="gabbiotto_infiammabili">Gabbiotto Infiammabili</option>
+                          <option value="laboratorio">Laboratorio</option>
+                          <option value="cappa">Cappa</option>
+                          <option value="esterno">Esterno</option>
+                        </select>
+                      </div>
                     )}
                     {currentUser.role === "admin" && (
                       <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
