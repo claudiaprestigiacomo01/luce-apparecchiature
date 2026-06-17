@@ -317,6 +317,29 @@ function PresenzeePage({ currentUser }) {
     }).eq("id", occupyModal.id).select().single();
     if (error) return alert("Errore: " + error.message);
     setPostazioni(prev => prev.map(p => p.id === occupyModal.id ? data : p));
+
+    // Registra nel log occupazioni
+    await supabase.from("occupazioni_log").insert([{
+      postazione_id: occupyModal.id,
+      postazione_nome: occupyModal.nome,
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      data: todayStr,
+      ora_inizio: occupyForm.ora_inizio,
+      ora_fine: occupyForm.ora_fine,
+      attivita: occupyForm.attivita
+    }]);
+
+    // Registra anche come presenza
+    await supabase.from("presenze").insert([{
+      user_id: currentUser.id,
+      user_name: currentUser.name,
+      data: todayStr,
+      ora_inizio: occupyForm.ora_inizio,
+      ora_fine: occupyForm.ora_fine,
+      attivita: occupyForm.attivita ? `${occupyModal.nome} — ${occupyForm.attivita}` : occupyModal.nome
+    }]);
+
     setOccupyModal(null);
     setOccupyForm({ attivita: "", ora_inizio: "", ora_fine: "" });
   };
@@ -484,21 +507,24 @@ function PresenzeePage({ currentUser }) {
 // ─── PRESENZE CRONOLOGIA ADMIN ────────────────────────────────────────────────
 function PresenzeCronologia() {
   const [presenze, setPresenze] = useState([]);
+  const [occupazioni, setOccupazioni] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState("");
   const [filterUser, setFilterUser] = useState("");
+  const [tab, setTab] = useState("presenze");
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
     Promise.all([
       supabase.from("presenze").select("*").order("data", { ascending: false }),
+      supabase.from("occupazioni_log").select("*").order("data", { ascending: false }),
       supabase.from("users").select("id, name").order("name")
-    ]).then(([{ data: p }, { data: u }]) => {
-      setPresenze(p || []); setUsers(u || []); setLoading(false);
+    ]).then(([{ data: p }, { data: o }, { data: u }]) => {
+      setPresenze(p || []); setOccupazioni(o || []); setUsers(u || []); setLoading(false);
     });
   }, []);
 
-  const filtered = presenze.filter(p => {
+  const filtered = (tab === "presenze" ? presenze : occupazioni).filter(p => {
     const matchDate = !filterDate || p.data === filterDate;
     const matchUser = !filterUser || p.user_name.toLowerCase().includes(filterUser.toLowerCase());
     return matchDate && matchUser;
@@ -510,6 +536,17 @@ function PresenzeCronologia() {
 
   return (
     <div style={{ marginBottom: 20 }}>
+      {/* Tab */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 12, background: "#f5f5f5", borderRadius: 8, padding: 4 }}>
+        <button onClick={() => setTab("presenze")} style={{ flex: 1, padding: "6px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === "presenze" ? "#fff" : "transparent", color: tab === "presenze" ? "#333" : "#888", fontWeight: tab === "presenze" ? 500 : 400, fontSize: 12, boxShadow: tab === "presenze" ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
+          📅 Presenze ({presenze.length})
+        </button>
+        <button onClick={() => setTab("occupazioni")} style={{ flex: 1, padding: "6px", borderRadius: 6, border: "none", cursor: "pointer", background: tab === "occupazioni" ? "#fff" : "transparent", color: tab === "occupazioni" ? "#333" : "#888", fontWeight: tab === "occupazioni" ? 500 : 400, fontSize: 12, boxShadow: tab === "occupazioni" ? "0 1px 4px rgba(0,0,0,0.1)" : "none" }}>
+          📍 Occupazioni ({occupazioni.length})
+        </button>
+      </div>
+
+      {/* Filtri */}
       <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
         <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
           style={{ flex: 1, fontSize: 13, padding: "6px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 130 }} />
@@ -525,26 +562,29 @@ function PresenzeCronologia() {
           </button>
         )}
       </div>
+
+      {/* Lista */}
       {filtered.length === 0
-        ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessuna presenza trovata</p>
+        ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun record trovato</p>
         : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {filtered.map(p => (
-              <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: "#534AB7", flexShrink: 0 }}>
+            {filtered.map((p, i) => (
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: tab === "presenze" ? "#EEEDFE" : "#EAF3DE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 600, color: tab === "presenze" ? "#534AB7" : "#3B6D11", flexShrink: 0 }}>
                   {p.user_name.split(" ").map(n => n[0]).join("").slice(0,2)}
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontWeight: 500, fontSize: 13, margin: 0 }}>{p.user_name}</p>
                   <p style={{ fontSize: 12, color: "#888", margin: "2px 0 0" }}>
                     📅 {fmtDate(p.data)} · 🕐 {p.ora_inizio?.slice(0,5)}–{p.ora_fine?.slice(0,5)}
-                    {p.attivita && <span style={{ color: "#aaa" }}> · {p.attivita}</span>}
+                    {tab === "occupazioni" && p.postazione_nome && <span style={{ color: "#3B6D11", marginLeft: 4 }}>· 📍 {p.postazione_nome}</span>}
+                    {p.attivita && <span style={{ color: "#aaa", marginLeft: 4 }}>· {p.attivita}</span>}
                   </p>
                 </div>
               </div>
             ))}
           </div>
       }
-      <p style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>{filtered.length} presenze trovate</p>
+      <p style={{ fontSize: 11, color: "#aaa", marginTop: 8 }}>{filtered.length} record trovati</p>
     </div>
   );
 }
