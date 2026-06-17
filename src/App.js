@@ -491,8 +491,8 @@ export default function App() {
   const pendingUsers = users.filter(u => u.status === "pending");
 
   const navBtn = (v, label, icon, badge) => (
-    <button onClick={() => setView(v)} style={{ padding: "7px 16px", borderRadius: 8, border: "none", cursor: "pointer", background: view === v ? "#7F77DD" : "transparent", color: view === v ? "#fff" : "#666", fontWeight: view === v ? 500 : 400, fontSize: 14, display: "flex", alignItems: "center", gap: 6, position: "relative" }}>
-      <i className={`ti ti-${icon}`} aria-hidden="true" style={{ fontSize: 16 }} />{label}
+    <button onClick={() => setView(v)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: view === v ? "#7F77DD" : "#f0f0f0", color: view === v ? "#fff" : "#666", fontWeight: view === v ? 500 : 400, fontSize: 13, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", position: "relative", flexShrink: 0 }}>
+      <i className={`ti ti-${icon}`} aria-hidden="true" style={{ fontSize: 15 }} />{label}
       {badge > 0 && <span style={{ background: "#A32D2D", color: "#fff", borderRadius: "50%", fontSize: 10, padding: "1px 5px", marginLeft: 2 }}>{badge}</span>}
     </button>
   );
@@ -504,27 +504,27 @@ export default function App() {
   );
 
   return (
-    <div style={{ fontFamily: "sans-serif", maxWidth: 720, margin: "0 auto", padding: "1rem" }}>
+    <div style={{ fontFamily: "sans-serif", maxWidth: 720, margin: "0 auto", padding: "0.75rem" }}>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, paddingBottom: 12, borderBottom: "0.5px solid #e0e0e0" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <i className="ti ti-flask" style={{ fontSize: 22, color: "#7F77DD" }} />
-          <span style={{ fontWeight: 500, fontSize: 17 }}>LTCE</span>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingBottom: 10, borderBottom: "0.5px solid #e0e0e0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <i className="ti ti-flask" style={{ fontSize: 20, color: "#7F77DD" }} />
+          <span style={{ fontWeight: 600, fontSize: 16 }}>LTCE</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <span style={{ fontSize: 13, color: "#888" }}>👤 {currentUser.name}</span>
-          <button onClick={logout} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
-            <i className="ti ti-logout" style={{ fontSize: 13, verticalAlign: -2, marginRight: 4 }} />Esci
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <span style={{ fontSize: 12, color: "#888" }}>👤 {currentUser.name.split(" ")[0]}</span>
+          <button onClick={logout} style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
+            <i className="ti ti-logout" style={{ fontSize: 12, verticalAlign: -2 }} />
           </button>
         </div>
       </div>
 
-      {/* Nav */}
-      <div style={{ display: "flex", gap: 4, marginBottom: 20, flexWrap: "wrap" }}>
-        {navBtn("catalog", "Apparecchiature", "microscope")}
+      {/* Nav — scroll orizzontale su mobile */}
+      <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
+        {navBtn("catalog", "Strumenti", "microscope")}
         {navBtn("calendar", "Calendario", "calendar")}
-        {navBtn("mybookings", "Le mie prenotazioni", "bookmark")}
+        {navBtn("mybookings", "Prenotazioni", "bookmark")}
         {navBtn("inventory", "Inventario", "box")}
         {currentUser.role === "admin" && navBtn("admin", "Admin", "settings", pendingUsers.length)}
       </div>
