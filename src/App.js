@@ -51,8 +51,7 @@ function InventoryPage({ currentUser }) {
 
   useEffect(() => {
     supabase.from("inventory").select("*").order("category").then(({ data }) => {
-      setItems(data || []);
-      setLoading(false);
+      setItems(data || []); setLoading(false);
     });
   }, []);
 
@@ -94,28 +93,22 @@ function InventoryPage({ currentUser }) {
   const updateQuantity = async (type) => {
     const delta = type === "load" ? +amount : -amount;
     const newQty = Math.max(0, selected.quantity + delta);
-    const newStatus = newQty === 0 ? "exhausted" : "available";
     const { data, error } = await supabase.from("inventory").update({
-      quantity: newQty, status: newStatus, updated_by: currentUser.name, updated_at: new Date()
+      quantity: newQty, status: newQty === 0 ? "exhausted" : "available", updated_by: currentUser.name, updated_at: new Date()
     }).eq("id", selected.id).select().single();
     if (error) return alert("Errore: " + error.message);
     setItems(prev => prev.map(i => i.id === selected.id ? data : i));
-    setModal(null);
-    setAmount("");
+    setModal(null); setAmount("");
   };
 
   const updateStatus = async (id, status) => {
-    const { data, error } = await supabase.from("inventory").update({
-      status, updated_by: currentUser.name, updated_at: new Date()
-    }).eq("id", id).select().single();
+    const { data, error } = await supabase.from("inventory").update({ status, updated_by: currentUser.name, updated_at: new Date() }).eq("id", id).select().single();
     if (error) return alert("Errore: " + error.message);
     setItems(prev => prev.map(i => i.id === id ? data : i));
   };
 
   const updateLocation = async (id, location) => {
-    const { data, error } = await supabase.from("inventory").update({
-      location, updated_by: currentUser.name, updated_at: new Date()
-    }).eq("id", id).select().single();
+    const { data, error } = await supabase.from("inventory").update({ location, updated_by: currentUser.name, updated_at: new Date() }).eq("id", id).select().single();
     if (error) return alert("Errore: " + error.message);
     setItems(prev => prev.map(i => i.id === id ? data : i));
   };
@@ -134,31 +127,26 @@ function InventoryPage({ currentUser }) {
         <button onClick={() => { setTab("reagenti"); setFilterLocation(""); setFilterStatus(""); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0", color: tab === "reagenti" ? "#fff" : "#555", fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14 }}>🧪 Reagenti</button>
         <button onClick={() => { setTab("bombole"); setFilterLocation(""); setFilterStatus(""); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "bombole" ? "#178BCA" : "#f0f0f0", color: tab === "bombole" ? "#fff" : "#555", fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14 }}>🫧 Bombole Gas</button>
       </div>
-
       <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cerca..."
           style={{ flex: "1 1 140px", fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 120 }} />
         <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}
           style={{ flex: "1 1 120px", fontSize: 12, padding: "7px 8px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 100 }}>
           <option value="">📍 Posizione</option>
-          {tab === "reagenti" ? (
-            <>
-              <option value="piano terra">Piano Terra</option>
-              <option value="armadio">Armadio</option>
-              <option value="scaffale">Scaffale</option>
-              <option value="frigo">Frigorifero</option>
-              <option value="cappa">Cappa</option>
-              <option value="armadietto">Armadietto</option>
-            </>
-          ) : (
-            <>
-              <option value="gabbiotto_inerti">Gabbiotto Inerti</option>
-              <option value="gabbiotto_infiammabili">Gabbiotto Infiammabili</option>
-              <option value="laboratorio">Laboratorio</option>
-              <option value="cappa">Cappa</option>
-              <option value="esterno">Esterno</option>
-            </>
-          )}
+          {tab === "reagenti" ? (<>
+            <option value="piano terra">Piano Terra</option>
+            <option value="armadio">Armadio</option>
+            <option value="scaffale">Scaffale</option>
+            <option value="frigo">Frigorifero</option>
+            <option value="cappa">Cappa</option>
+            <option value="armadietto">Armadietto</option>
+          </>) : (<>
+            <option value="gabbiotto_inerti">Gabbiotto Inerti</option>
+            <option value="gabbiotto_infiammabili">Gabbiotto Infiammabili</option>
+            <option value="laboratorio">Laboratorio</option>
+            <option value="cappa">Cappa</option>
+            <option value="esterno">Esterno</option>
+          </>)}
         </select>
         {tab === "bombole" && (
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
@@ -173,7 +161,6 @@ function InventoryPage({ currentUser }) {
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
       </div>
-
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {filtered.length === 0
           ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessun elemento trovato</p>
@@ -203,14 +190,12 @@ function InventoryPage({ currentUser }) {
                       </div>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                        <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
-                          style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                        <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)} style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
                           <option value="full">Piena</option>
                           <option value="partial">Parziale</option>
                           <option value="empty">Vuota</option>
                         </select>
-                        <select value={item.location || ""} onChange={e => updateLocation(item.id, e.target.value)}
-                          style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                        <select value={item.location || ""} onChange={e => updateLocation(item.id, e.target.value)} style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
                           <option value="">📍 Posizione</option>
                           <option value="gabbiotto_inerti">Gabbiotto Inerti</option>
                           <option value="gabbiotto_infiammabili">Gabbiotto Infiammabili</option>
@@ -231,7 +216,6 @@ function InventoryPage({ currentUser }) {
             })
         }
       </div>
-
       {modal === "add" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 360, maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto" }}>
@@ -244,13 +228,12 @@ function InventoryPage({ currentUser }) {
               { label: "Quantità", key: "quantity", type: "number", placeholder: "0" },
               { label: "Unità", key: "unit", type: "text", placeholder: "es. L, kg, pz" },
               { label: "Scorta minima", key: "min_quantity", type: "number", placeholder: "0" },
-              { label: "Posizione", key: "location", type: "text", placeholder: "es. Armadio 1A, Piano Terra..." },
+              { label: "Posizione", key: "location", type: "text", placeholder: "es. Armadio 1A..." },
               { label: "Note", key: "notes", type: "text", placeholder: "opzionale" },
             ].map(f => (
               <div key={f.key}>
                 <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>{f.label}</label>
-                <input type={f.type} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
-                  placeholder={f.placeholder}
+                <input type={f.type} value={form[f.key]} onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))} placeholder={f.placeholder}
                   style={{ width: "100%", marginBottom: 10, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
               </div>
             ))}
@@ -264,7 +247,6 @@ function InventoryPage({ currentUser }) {
           </div>
         </div>
       )}
-
       {(modal === "load" || modal === "unload") && selected && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 320, maxWidth: "90vw" }}>
@@ -302,9 +284,7 @@ function PresenzeePage({ currentUser }) {
       supabase.from("presenze").select("*").order("data", { ascending: false }),
       supabase.from("postazioni").select("*").order("id")
     ]).then(([{ data: p }, { data: po }]) => {
-      setPresenze(p || []);
-      setPostazioni(po || []);
-      setLoading(false);
+      setPresenze(p || []); setPostazioni(po || []); setLoading(false);
     });
   }, []);
 
@@ -331,12 +311,9 @@ function PresenzeePage({ currentUser }) {
   const occupyPostazione = async () => {
     if (!occupyForm.ora_inizio || !occupyForm.ora_fine) return alert("Inserisci ora inizio e ora fine!");
     const { data, error } = await supabase.from("postazioni").update({
-      occupied_by: currentUser.id,
-      occupied_by_name: currentUser.name,
-      attivita: occupyForm.attivita,
-      ora_inizio: occupyForm.ora_inizio,
-      ora_fine: occupyForm.ora_fine,
-      data: todayStr
+      occupied_by: currentUser.id, occupied_by_name: currentUser.name,
+      attivita: occupyForm.attivita, ora_inizio: occupyForm.ora_inizio,
+      ora_fine: occupyForm.ora_fine, data: todayStr
     }).eq("id", occupyModal.id).select().single();
     if (error) return alert("Errore: " + error.message);
     setPostazioni(prev => prev.map(p => p.id === occupyModal.id ? data : p));
@@ -367,45 +344,35 @@ function PresenzeePage({ currentUser }) {
 
   return (
     <div>
-      {/* MAPPA POSTAZIONI */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 10 }}>🗺️ Postazioni laboratorio — oggi</p>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
-          {postazioni.map(p => {
-            const isOccupied = p.occupied_by !== null && p.data === todayStr;
-            const isMine = p.occupied_by === currentUser.id && p.data === todayStr;
-            return (
-              <div key={p.id} style={{
-                background: isOccupied ? (isMine ? "#EEEDFE" : "#FAECE7") : "#EAF3DE",
-                border: `1.5px solid ${isOccupied ? (isMine ? "#7F77DD" : "#A32D2D") : "#3B6D11"}`,
-                borderRadius: 10, padding: "0.7rem 0.8rem", cursor: isOccupied && !isMine ? "default" : "pointer",
-                transition: "transform 0.1s"
-              }}
-                onClick={() => !isOccupied ? setOccupyModal(p) : isMine ? freePostazione(p.id) : null}
-              >
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
-                  <span style={{ fontSize: 10, fontWeight: 500, padding: "2px 6px", borderRadius: 4, background: isOccupied ? (isMine ? "#7F77DD" : "#A32D2D") : "#3B6D11", color: "#fff" }}>
-                    {isOccupied ? (isMine ? "MIA" : "OCCUPATA") : "LIBERA"}
-                  </span>
-                  <span style={{ fontSize: 10, color: "#888" }}>{p.cappa}</span>
-                </div>
-                <p style={{ fontSize: 12, fontWeight: 600, margin: "4px 0 2px", color: "#333", lineHeight: 1.3 }}>{p.nome}</p>
-                {isOccupied && (
-                  <div>
-                    <p style={{ fontSize: 11, color: isMine ? "#7F77DD" : "#A32D2D", margin: "2px 0" }}>👤 {p.occupied_by_name}</p>
-                    {p.ora_inizio && <p style={{ fontSize: 11, color: "#888", margin: 0 }}>🕐 {p.ora_inizio.slice(0,5)}–{p.ora_fine?.slice(0,5)}</p>}
-                    {p.attivita && <p style={{ fontSize: 10, color: "#aaa", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.attivita}</p>}
-                    {isMine && <p style={{ fontSize: 10, color: "#7F77DD", margin: "4px 0 0", textAlign: "center" }}>Tocca per liberare</p>}
-                  </div>
-                )}
-                {!isOccupied && <p style={{ fontSize: 10, color: "#3B6D11", margin: "4px 0 0", textAlign: "center" }}>Tocca per occupare</p>}
+      <p style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 10 }}>🗺️ Postazioni laboratorio — oggi</p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8, marginBottom: 24 }}>
+        {postazioni.map(p => {
+          const isOccupied = p.occupied_by !== null && p.data === todayStr;
+          const isMine = p.occupied_by === currentUser.id && p.data === todayStr;
+          return (
+            <div key={p.id} style={{ background: isOccupied ? (isMine ? "#EEEDFE" : "#FAECE7") : "#EAF3DE", border: `1.5px solid ${isOccupied ? (isMine ? "#7F77DD" : "#A32D2D") : "#3B6D11"}`, borderRadius: 10, padding: "0.7rem 0.8rem", cursor: isOccupied && !isMine ? "default" : "pointer" }}
+              onClick={() => !isOccupied ? setOccupyModal(p) : isMine ? freePostazione(p.id) : null}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                <span style={{ fontSize: 10, fontWeight: 500, padding: "2px 6px", borderRadius: 4, background: isOccupied ? (isMine ? "#7F77DD" : "#A32D2D") : "#3B6D11", color: "#fff" }}>
+                  {isOccupied ? (isMine ? "MIA" : "OCCUPATA") : "LIBERA"}
+                </span>
+                <span style={{ fontSize: 10, color: "#888" }}>{p.cappa}</span>
               </div>
-            );
-          })}
-        </div>
+              <p style={{ fontSize: 12, fontWeight: 600, margin: "4px 0 2px", color: "#333", lineHeight: 1.3 }}>{p.nome}</p>
+              {isOccupied && (
+                <div>
+                  <p style={{ fontSize: 11, color: isMine ? "#7F77DD" : "#A32D2D", margin: "2px 0" }}>👤 {p.occupied_by_name}</p>
+                  {p.ora_inizio && <p style={{ fontSize: 11, color: "#888", margin: 0 }}>🕐 {p.ora_inizio.slice(0,5)}–{p.ora_fine?.slice(0,5)}</p>}
+                  {p.attivita && <p style={{ fontSize: 10, color: "#aaa", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.attivita}</p>}
+                  {isMine && <p style={{ fontSize: 10, color: "#7F77DD", margin: "4px 0 0", textAlign: "center" }}>Tocca per liberare</p>}
+                </div>
+              )}
+              {!isOccupied && <p style={{ fontSize: 10, color: "#3B6D11", margin: "4px 0 0", textAlign: "center" }}>Tocca per occupare</p>}
+            </div>
+          );
+        })}
       </div>
 
-      {/* MODAL OCCUPA POSTAZIONE */}
       {occupyModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 340, maxWidth: "90vw" }}>
@@ -427,26 +394,18 @@ function PresenzeePage({ currentUser }) {
               </div>
             </div>
             <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Attività (opzionale)</label>
-            <input type="text" value={occupyForm.attivita} onChange={e => setOccupyForm(f => ({ ...f, attivita: e.target.value }))}
-              placeholder="es. Analisi campioni..."
+            <input type="text" value={occupyForm.attivita} onChange={e => setOccupyForm(f => ({ ...f, attivita: e.target.value }))} placeholder="es. Analisi campioni..."
               style={{ width: "100%", marginBottom: 14, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-            <button onClick={occupyPostazione} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: "#3B6D11", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
-              ✓ Occupa postazione
-            </button>
+            <button onClick={occupyPostazione} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: "#3B6D11", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>✓ Occupa postazione</button>
           </div>
         </div>
       )}
 
-      {/* REGISTRO PRESENZE */}
       <div style={{ borderTop: "0.5px solid #e0e0e0", paddingTop: 16 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
           <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
             style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 140 }} />
-          {filterDate && (
-            <button onClick={() => setFilterDate("")} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
-              ✕ Tutti
-            </button>
-          )}
+          {filterDate && <button onClick={() => setFilterDate("")} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>✕ Tutti</button>}
           <button onClick={() => setShowForm(!showForm)} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
             <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi presenza
           </button>
@@ -474,8 +433,7 @@ function PresenzeePage({ currentUser }) {
             </div>
             <div style={{ marginBottom: 10 }}>
               <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Descrizione attività</label>
-              <input type="text" value={form.attivita} onChange={e => setForm(f => ({ ...f, attivita: e.target.value }))}
-                placeholder="es. Analisi GC-MS campioni biodiesel..."
+              <input type="text" value={form.attivita} onChange={e => setForm(f => ({ ...f, attivita: e.target.value }))} placeholder="es. Analisi GC-MS campioni biodiesel..."
                 style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
             </div>
             <div style={{ display: "flex", gap: 8 }}>
@@ -533,12 +491,10 @@ function PresenzeCronologia() {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("presenze").select("*").order("data", { ascending: false }).order("ora_inizio"),
+      supabase.from("presenze").select("*").order("data", { ascending: false }),
       supabase.from("users").select("id, name").order("name")
     ]).then(([{ data: p }, { data: u }]) => {
-      setPresenze(p || []);
-      setUsers(u || []);
-      setLoading(false);
+      setPresenze(p || []); setUsers(u || []); setLoading(false);
     });
   }, []);
 
@@ -569,7 +525,6 @@ function PresenzeCronologia() {
           </button>
         )}
       </div>
-
       {filtered.length === 0
         ? <p style={{ fontSize: 13, color: "#aaa" }}>Nessuna presenza trovata</p>
         : <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -611,8 +566,7 @@ function LoginPage({ onLogin }) {
     const { data: userData } = await supabase.from("users").select("*").eq("email", email).single();
     if (!userData) { setError("Utente non trovato. Contatta l'admin."); setLoading(false); return; }
     if (userData.status === "pending") { setError("Il tuo account è in attesa di approvazione dall'admin."); setLoading(false); return; }
-    onLogin(userData);
-    setLoading(false);
+    onLogin(userData); setLoading(false);
   };
 
   const register = async () => {
@@ -622,9 +576,7 @@ function LoginPage({ onLogin }) {
     setLoading(true); setError("");
     const { error: authError } = await supabase.auth.signUp({ email, password });
     if (authError) { setError(authError.message); setLoading(false); return; }
-    const { error: dbError } = await supabase.from("users").insert([{
-      name: name.trim(), email: email.trim(), role: "researcher", status: "pending"
-    }]);
+    const { error: dbError } = await supabase.from("users").insert([{ name: name.trim(), email: email.trim(), role: "researcher", status: "pending" }]);
     if (dbError) { setError("Errore: " + dbError.message); setLoading(false); return; }
     await sendEmailDirect(
       `Nuova richiesta di registrazione — ${name}`,
@@ -648,13 +600,11 @@ function LoginPage({ onLogin }) {
         </div>
         {error && <p style={{ color: "#A32D2D", fontSize: 13, background: "#FAECE7", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{error}</p>}
         {success && <p style={{ color: "#3B6D11", fontSize: 13, background: "#EAF3DE", padding: "8px 12px", borderRadius: 8, marginBottom: 12 }}>{success}</p>}
-        {mode === "register" && (
-          <>
-            <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Nome e Cognome</label>
-            <input value={name} onChange={e => setName(e.target.value)} placeholder="es. Mario Rossi"
-              style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-          </>
-        )}
+        {mode === "register" && (<>
+          <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Nome e Cognome</label>
+          <input value={name} onChange={e => setName(e.target.value)} placeholder="es. Mario Rossi"
+            style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+        </>)}
         <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Email</label>
         <input value={email} onChange={e => setEmail(e.target.value)} placeholder="nome@lab.it" type="email"
           style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "8px 10px", borderRadius: 8, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
@@ -713,20 +663,14 @@ export default function App() {
 
   const sendEmail = async (type, details) => {
     let subject = "", html = "";
-    if (type === "booking_created") {
-      subject = `Nuova prenotazione — ${currentUser.name}`;
-      html = `<h2>Nuova prenotazione</h2><p><b>${currentUser.name}</b> ha prenotato: <b>${details}</b></p>`;
-    } else if (type === "booking_cancelled") {
-      subject = `Prenotazione annullata — ${currentUser.name}`;
-      html = `<h2>Prenotazione annullata</h2><p><b>${currentUser.name}</b> ha annullato: <b>${details}</b></p>`;
-    }
+    if (type === "booking_created") { subject = `Nuova prenotazione — ${currentUser.name}`; html = `<h2>Nuova prenotazione</h2><p><b>${currentUser.name}</b> ha prenotato: <b>${details}</b></p>`; }
+    else if (type === "booking_cancelled") { subject = `Prenotazione annullata — ${currentUser.name}`; html = `<h2>Prenotazione annullata</h2><p><b>${currentUser.name}</b> ha annullato: <b>${details}</b></p>`; }
     await sendEmailDirect(subject, html);
   };
 
   const logout = async () => {
     await supabase.auth.signOut();
-    setCurrentUser(null);
-    setUsers([]); setEquipment([]); setBookings([]);
+    setCurrentUser(null); setUsers([]); setEquipment([]); setBookings([]);
   };
 
   const isBooked = (equipId, day, slot) =>
@@ -758,9 +702,7 @@ export default function App() {
 
   const addUser = async () => {
     if (!userForm.name.trim() || !userForm.email.trim()) return alert("Inserisci nome ed email!");
-    const { data, error } = await supabase.from("users").insert([{
-      name: userForm.name.trim(), email: userForm.email.trim(), role: userForm.role, status: "approved"
-    }]).select().single();
+    const { data, error } = await supabase.from("users").insert([{ name: userForm.name.trim(), email: userForm.email.trim(), role: userForm.role, status: "approved" }]).select().single();
     if (error) return alert("Errore: " + error.message);
     setUsers(prev => [...prev, data]);
     setUserForm({ name: "", email: "", role: "researcher" });
@@ -799,22 +741,16 @@ export default function App() {
   const pendingUsers = users.filter(u => u.status === "pending");
 
   const navBtn = (v, label, icon, badge) => (
-    <button onClick={() => setView(v)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: view === v ? "#7F77DD" : "#f0f0f0", color: view === v ? "#fff" : "#666", fontWeight: view === v ? 500 : 400, fontSize: 13, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", position: "relative", flexShrink: 0 }}>
+    <button onClick={() => setView(v)} style={{ padding: "6px 12px", borderRadius: 8, border: "none", cursor: "pointer", background: view === v ? "#7F77DD" : "#f0f0f0", color: view === v ? "#fff" : "#666", fontWeight: view === v ? 500 : 400, fontSize: 13, display: "flex", alignItems: "center", gap: 5, whiteSpace: "nowrap", flexShrink: 0 }}>
       <i className={`ti ti-${icon}`} aria-hidden="true" style={{ fontSize: 15 }} />{label}
       {badge > 0 && <span style={{ background: "#A32D2D", color: "#fff", borderRadius: "50%", fontSize: 10, padding: "1px 5px", marginLeft: 2 }}>{badge}</span>}
     </button>
   );
 
-  if (loading) return (
-    <div style={{ textAlign: "center", padding: "3rem", color: "#666" }}>
-      <i className="ti ti-loader-2" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />Caricamento...
-    </div>
-  );
+  if (loading) return <div style={{ textAlign: "center", padding: "3rem", color: "#666" }}><i className="ti ti-loader-2" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />Caricamento...</div>;
 
   return (
     <div style={{ fontFamily: "sans-serif", maxWidth: 720, margin: "0 auto", padding: "0.75rem" }}>
-
-      {/* Header */}
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, paddingBottom: 10, borderBottom: "0.5px solid #e0e0e0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <i className="ti ti-flask" style={{ fontSize: 20, color: "#7F77DD" }} />
@@ -828,7 +764,6 @@ export default function App() {
         </div>
       </div>
 
-      {/* Nav */}
       <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
         {navBtn("catalog", "Strumenti", "microscope")}
         {navBtn("calendar", "Calendario", "calendar")}
@@ -838,7 +773,6 @@ export default function App() {
         {currentUser.role === "admin" && navBtn("admin", "Admin", "settings", pendingUsers.length)}
       </div>
 
-      {/* CATALOG */}
       {view === "catalog" && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           {equipment.map(eq => {
@@ -868,7 +802,6 @@ export default function App() {
         </div>
       )}
 
-      {/* CALENDAR */}
       {view === "calendar" && (
         <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <p style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>Prossimi 7 giorni</p>
@@ -905,13 +838,11 @@ export default function App() {
         </div>
       )}
 
-      {/* MY BOOKINGS */}
       {view === "mybookings" && (
         <div>
           {myBookings.length === 0
             ? <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
-                <i className="ti ti-calendar-off" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />
-                Nessuna prenotazione attiva
+                <i className="ti ti-calendar-off" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />Nessuna prenotazione attiva
               </div>
             : <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {myBookings.map(b => {
@@ -923,10 +854,9 @@ export default function App() {
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 500, fontSize: 14, margin: 0 }}>{eq?.name}</p>
-                        <p style={{ fontSize: 12, color: "#888", margin: "2px 0 0" }}>
-                          {fmt(DAYS[b.day])} · {SLOTS[b.slot]}
-                          {b.note && <span style={{ color: "#aaa" }}> · {b.note}</span>}
-                        </p>
+                        <p style={{ fontSize: 12, color: "#888", margin: "2px 0 0" }}>{fmt(DAYS[b.day])} · {SLOTS[b.slot]}</p>
+                        {b.metodo && <p style={{ fontSize: 12, color: "#7F77DD", margin: "2px 0 0" }}>🔬 {b.metodo}</p>}
+                        {b.note && <p style={{ fontSize: 12, color: "#aaa", margin: "2px 0 0" }}>📝 {b.note}</p>}
                       </div>
                       <button onClick={() => cancel(b.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
                         <i className="ti ti-trash" style={{ fontSize: 14, verticalAlign: -2 }} />
@@ -939,13 +869,9 @@ export default function App() {
         </div>
       )}
 
-      {/* PRESENZE */}
       {view === "presenze" && <PresenzeePage currentUser={currentUser} />}
-
-      {/* INVENTORY */}
       {view === "inventory" && <InventoryPage currentUser={currentUser} />}
 
-      {/* ADMIN */}
       {view === "admin" && currentUser.role === "admin" && (
         <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
@@ -1005,8 +931,7 @@ export default function App() {
                   <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{u.name}</p>
                   <p style={{ fontSize: 11, color: "#aaa", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
                 </div>
-                <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
-                  style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                <select value={u.role} onChange={e => changeRole(u.id, e.target.value)} style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
                   <option value="researcher">Ricercatore</option>
                   <option value="technician">Tecnico</option>
                   <option value="admin">Admin</option>
@@ -1017,6 +942,9 @@ export default function App() {
               </div>
             ))}
           </div>
+
+          <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>👥 Cronologia presenze</p>
+          <PresenzeCronologia />
 
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>📋 Cronologia azioni</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
@@ -1050,6 +978,7 @@ export default function App() {
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontWeight: 500, fontSize: 13 }}>{eq?.name}</span>
                     <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>{fmt(DAYS[b.day])} · {SLOTS[b.slot]}</span>
+                    {b.metodo && <span style={{ fontSize: 12, color: "#7F77DD", marginLeft: 8 }}>· {b.metodo}</span>}
                   </div>
                   <span style={{ fontSize: 12, color: "#888", flexShrink: 0 }}>{usr?.name.split(" ")[0]}</span>
                   <button onClick={() => cancel(b.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
@@ -1062,7 +991,6 @@ export default function App() {
         </div>
       )}
 
-      {/* MODAL PRENOTAZIONE */}
       {modal && modal.id && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
           <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 340, maxWidth: "90vw", border: "0.5px solid #ddd" }}>
