@@ -135,12 +135,12 @@ function InventoryPage({ currentUser }) {
         <button onClick={() => setTab("bombole")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "bombole" ? "#178BCA" : "#f0f0f0", color: tab === "bombole" ? "#fff" : "#555", fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14 }}>🫧 Bombole Gas</button>
       </div>
 
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
+      <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cerca..."
-          style={{ flex: 1, fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc" }} />
+          style={{ flex: "1 1 140px", fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 120 }} />
         <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}
-          style={{ fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc" }}>
-          <option value="">📍 Tutte le posizioni</option>
+          style={{ flex: "1 1 120px", fontSize: 12, padding: "7px 8px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 100 }}>
+          <option value="">📍 Posizione</option>
           {tab === "reagenti" ? (
             <>
               <option value="piano terra">Piano Terra</option>
@@ -162,14 +162,14 @@ function InventoryPage({ currentUser }) {
         </select>
         {tab === "bombole" && (
           <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-            style={{ fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc" }}>
-            <option value="">🔵 Tutti gli stati</option>
+            style={{ flex: "1 1 100px", fontSize: 12, padding: "7px 8px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 90 }}>
+            <option value="">🔵 Stato</option>
             <option value="full">Piena</option>
             <option value="partial">Parziale</option>
             <option value="empty">Vuota</option>
           </select>
         )}
-        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
+        <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 12px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
       </div>
