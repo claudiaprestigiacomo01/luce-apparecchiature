@@ -42,9 +42,10 @@ function InventoryPage({ currentUser }) {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("reagenti");
   const [search, setSearch] = useState("");
+  const [filterLocation, setFilterLocation] = useState("");
   const [modal, setModal] = useState(null);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
+  const [form, setForm] = useState({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", location: "", notes: "" });
   const [amount, setAmount] = useState("");
 
   useEffect(() => {
@@ -57,7 +58,8 @@ function InventoryPage({ currentUser }) {
   const filtered = items.filter(i => {
     const matchTab = tab === "reagenti" ? i.category === "Reagente" : i.category === "Bombola";
     const matchSearch = i.name.toLowerCase().includes(search.toLowerCase()) || (i.notes || "").toLowerCase().includes(search.toLowerCase());
-    return matchTab && matchSearch;
+    const matchLocation = !filterLocation || (i.location || "") === filterLocation || (i.notes || "").toLowerCase().includes(filterLocation.toLowerCase());
+    return matchTab && matchSearch && matchLocation;
   });
 
   const STATUS = {
@@ -134,6 +136,28 @@ function InventoryPage({ currentUser }) {
       <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="🔍 Cerca..."
           style={{ flex: 1, fontSize: 13, padding: "7px 12px", borderRadius: 8, border: "0.5px solid #ccc" }} />
+        <select value={filterLocation} onChange={e => setFilterLocation(e.target.value)}
+          style={{ fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc" }}>
+          <option value="">📍 Tutte le posizioni</option>
+          {tab === "reagenti" ? (
+            <>
+              <option value="piano terra">Piano Terra</option>
+              <option value="armadio">Armadio</option>
+              <option value="scaffale">Scaffale</option>
+              <option value="frigo">Frigorifero</option>
+              <option value="cappa">Cappa</option>
+              <option value="armadietto">Armadietto</option>
+            </>
+          ) : (
+            <>
+              <option value="gabbiotto_inerti">Gabbiotto Inerti</option>
+              <option value="gabbiotto_infiammabili">Gabbiotto Infiammabili</option>
+              <option value="laboratorio">Laboratorio</option>
+              <option value="cappa">Cappa</option>
+              <option value="esterno">Esterno</option>
+            </>
+          )}
+        </select>
         <button onClick={() => setModal("add")} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
           <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi
         </button>
@@ -213,6 +237,7 @@ function InventoryPage({ currentUser }) {
               { label: "Unità", key: "unit", type: "text", placeholder: "es. L, kg, pz" },
               { label: "Scorta minima", key: "min_quantity", type: "number", placeholder: "0" },
               { label: "Note", key: "notes", type: "text", placeholder: "opzionale" },
+            { label: "Posizione", key: "location", type: "text", placeholder: "es. Armadio 1A, Piano Terra..." },
             ].map(f => (
               <div key={f.key}>
                 <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>{f.label}</label>
