@@ -287,14 +287,25 @@ function InventoryPage({ currentUser }) {
 // ─── PRESENZE ─────────────────────────────────────────────────────────────────
 function PresenzeePage({ currentUser }) {
   const [presenze, setPresenze] = useState([]);
+  const [postazioni, setPostazioni] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({ data: "", ora_inizio: "", ora_fine: "", attivita: "" });
   const [filterDate, setFilterDate] = useState("");
+  const [occupyModal, setOccupyModal] = useState(null);
+  const [occupyForm, setOccupyForm] = useState({ attivita: "", ora_inizio: "", ora_fine: "" });
+
+  const todayStr = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    supabase.from("presenze").select("*").order("data", { ascending: false })
-      .then(({ data }) => { setPresenze(data || []); setLoading(false); });
+    Promise.all([
+      supabase.from("presenze").select("*").order("data", { ascending: false }),
+      supabase.from("postazioni").select("*").order("id")
+    ]).then(([{ data: p }, { data: po }]) => {
+      setPresenze(p || []);
+      setPostazioni(po || []);
+      setLoading(false);
+    });
   }, []);
 
   const addPresenza = async () => {
@@ -317,8 +328,33 @@ function PresenzeePage({ currentUser }) {
     setPresenze(prev => prev.filter(p => p.id !== id));
   };
 
-  const filtered = presenze.filter(p => !filterDate || p.data === filterDate);
+  const occupyPostazione = async () => {
+    if (!occupyForm.ora_inizio || !occupyForm.ora_fine) return alert("Inserisci ora inizio e ora fine!");
+    const { data, error } = await supabase.from("postazioni").update({
+      occupied_by: currentUser.id,
+      occupied_by_name: currentUser.name,
+      attivita: occupyForm.attivita,
+      ora_inizio: occupyForm.ora_inizio,
+      ora_fine: occupyForm.ora_fine,
+      data: todayStr
+    }).eq("id", occupyModal.id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setPostazioni(prev => prev.map(p => p.id === occupyModal.id ? data : p));
+    setOccupyModal(null);
+    setOccupyForm({ attivita: "", ora_inizio: "", ora_fine: "" });
+  };
 
+  const freePostazione = async (id) => {
+    const p = postazioni.find(x => x.id === id);
+    if (p.occupied_by !== currentUser.id && currentUser.role !== "admin") return alert("Non puoi liberare postazioni altrui!");
+    const { data, error } = await supabase.from("postazioni").update({
+      occupied_by: null, occupied_by_name: null, attivita: null, ora_inizio: null, ora_fine: null, data: null
+    }).eq("id", id).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setPostazioni(prev => prev.map(p => p.id === id ? data : p));
+  };
+
+  const filtered = presenze.filter(p => !filterDate || p.data === filterDate);
   const grouped = filtered.reduce((acc, p) => {
     if (!acc[p.data]) acc[p.data] = [];
     acc[p.data].push(p);
@@ -331,85 +367,158 @@ function PresenzeePage({ currentUser }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-          style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 140 }} />
-        {filterDate && (
-          <button onClick={() => setFilterDate("")} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
-            ✕ Tutti
-          </button>
-        )}
-        <button onClick={() => setShowForm(!showForm)} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
-          <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi presenza
-        </button>
+      {/* MAPPA POSTAZIONI */}
+      <div style={{ marginBottom: 24 }}>
+        <p style={{ fontSize: 13, fontWeight: 600, color: "#555", marginBottom: 10 }}>🗺️ Postazioni laboratorio — oggi</p>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 8 }}>
+          {postazioni.map(p => {
+            const isOccupied = p.occupied_by !== null && p.data === todayStr;
+            const isMine = p.occupied_by === currentUser.id && p.data === todayStr;
+            return (
+              <div key={p.id} style={{
+                background: isOccupied ? (isMine ? "#EEEDFE" : "#FAECE7") : "#EAF3DE",
+                border: `1.5px solid ${isOccupied ? (isMine ? "#7F77DD" : "#A32D2D") : "#3B6D11"}`,
+                borderRadius: 10, padding: "0.7rem 0.8rem", cursor: isOccupied && !isMine ? "default" : "pointer",
+                transition: "transform 0.1s"
+              }}
+                onClick={() => !isOccupied ? setOccupyModal(p) : isMine ? freePostazione(p.id) : null}
+              >
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+                  <span style={{ fontSize: 10, fontWeight: 500, padding: "2px 6px", borderRadius: 4, background: isOccupied ? (isMine ? "#7F77DD" : "#A32D2D") : "#3B6D11", color: "#fff" }}>
+                    {isOccupied ? (isMine ? "MIA" : "OCCUPATA") : "LIBERA"}
+                  </span>
+                  <span style={{ fontSize: 10, color: "#888" }}>{p.cappa}</span>
+                </div>
+                <p style={{ fontSize: 12, fontWeight: 600, margin: "4px 0 2px", color: "#333", lineHeight: 1.3 }}>{p.nome}</p>
+                {isOccupied && (
+                  <div>
+                    <p style={{ fontSize: 11, color: isMine ? "#7F77DD" : "#A32D2D", margin: "2px 0" }}>👤 {p.occupied_by_name}</p>
+                    {p.ora_inizio && <p style={{ fontSize: 11, color: "#888", margin: 0 }}>🕐 {p.ora_inizio.slice(0,5)}–{p.ora_fine?.slice(0,5)}</p>}
+                    {p.attivita && <p style={{ fontSize: 10, color: "#aaa", margin: "2px 0 0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{p.attivita}</p>}
+                    {isMine && <p style={{ fontSize: 10, color: "#7F77DD", margin: "4px 0 0", textAlign: "center" }}>Tocca per liberare</p>}
+                  </div>
+                )}
+                {!isOccupied && <p style={{ fontSize: 10, color: "#3B6D11", margin: "4px 0 0", textAlign: "center" }}>Tocca per occupare</p>}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
-      {showForm && (
-        <div style={{ background: "#f9f9f9", borderRadius: 12, padding: "1rem", marginBottom: 16, border: "0.5px solid #e0e0e0" }}>
-          <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 12px" }}>📅 Nuova presenza</p>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
-            <div>
-              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Data</label>
-              <input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))}
-                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+      {/* MODAL OCCUPA POSTAZIONE */}
+      {occupyModal && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 340, maxWidth: "90vw" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <p style={{ fontWeight: 600, fontSize: 14, margin: 0 }}>📍 {occupyModal.nome}</p>
+              <button onClick={() => setOccupyModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#888" }}>×</button>
             </div>
-            <div>
-              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora inizio</label>
-              <input type="time" value={form.ora_inizio} onChange={e => setForm(f => ({ ...f, ora_inizio: e.target.value }))}
-                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            <p style={{ fontSize: 12, color: "#7F77DD", margin: "0 0 12px" }}>{occupyModal.cappa}</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
+              <div>
+                <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora inizio</label>
+                <input type="time" value={occupyForm.ora_inizio} onChange={e => setOccupyForm(f => ({ ...f, ora_inizio: e.target.value }))}
+                  style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora fine</label>
+                <input type="time" value={occupyForm.ora_fine} onChange={e => setOccupyForm(f => ({ ...f, ora_fine: e.target.value }))}
+                  style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+              </div>
             </div>
-            <div>
-              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora fine</label>
-              <input type="time" value={form.ora_fine} onChange={e => setForm(f => ({ ...f, ora_fine: e.target.value }))}
-                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-            </div>
-          </div>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Descrizione attività</label>
-            <input type="text" value={form.attivita} onChange={e => setForm(f => ({ ...f, attivita: e.target.value }))}
-              placeholder="es. Analisi GC-MS campioni biodiesel..."
-              style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={addPresenza} style={{ flex: 1, padding: "8px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>✓ Conferma</button>
-            <button onClick={() => setShowForm(false)} style={{ padding: "8px 14px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", fontSize: 13, cursor: "pointer" }}>Annulla</button>
+            <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Attività (opzionale)</label>
+            <input type="text" value={occupyForm.attivita} onChange={e => setOccupyForm(f => ({ ...f, attivita: e.target.value }))}
+              placeholder="es. Analisi campioni..."
+              style={{ width: "100%", marginBottom: 14, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            <button onClick={occupyPostazione} style={{ width: "100%", padding: "9px", borderRadius: 8, border: "none", background: "#3B6D11", color: "#fff", fontWeight: 500, fontSize: 14, cursor: "pointer" }}>
+              ✓ Occupa postazione
+            </button>
           </div>
         </div>
       )}
 
-      {Object.keys(grouped).length === 0
-        ? <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
-            <i className="ti ti-calendar-off" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />
-            Nessuna presenza registrata
-          </div>
-        : Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(data => (
-            <div key={data} style={{ marginBottom: 20 }}>
-              <div style={{ background: "#EEEDFE", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "#534AB7" }}>{fmtDate(data)}</span>
-                <span style={{ fontSize: 12, color: "#7F77DD", marginLeft: 8 }}>{grouped[data].length} {grouped[data].length === 1 ? "presenza" : "presenze"}</span>
+      {/* REGISTRO PRESENZE */}
+      <div style={{ borderTop: "0.5px solid #e0e0e0", paddingTop: 16 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+            style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 140 }} />
+          {filterDate && (
+            <button onClick={() => setFilterDate("")} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
+              ✕ Tutti
+            </button>
+          )}
+          <button onClick={() => setShowForm(!showForm)} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
+            <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi presenza
+          </button>
+        </div>
+
+        {showForm && (
+          <div style={{ background: "#f9f9f9", borderRadius: 12, padding: "1rem", marginBottom: 16, border: "0.5px solid #e0e0e0" }}>
+            <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 12px" }}>📅 Nuova presenza</p>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+              <div>
+                <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Data</label>
+                <input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))}
+                  style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {grouped[data].sort((a,b) => a.ora_inizio.localeCompare(b.ora_inizio)).map(p => (
-                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: `0.5px solid ${p.user_id === currentUser.id ? "#7F77DD" : "#e0e0e0"}`, borderRadius: 10 }}>
-                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: p.user_id === currentUser.id ? "#EEEDFE" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: p.user_id === currentUser.id ? "#7F77DD" : "#888", flexShrink: 0 }}>
-                      {p.user_name.split(" ").map(n => n[0]).join("").slice(0,2)}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ fontWeight: 500, fontSize: 13, margin: 0 }}>{p.user_name}</p>
-                      <p style={{ fontSize: 12, color: "#7F77DD", margin: "2px 0" }}>🕐 {p.ora_inizio.slice(0,5)} — {p.ora_fine.slice(0,5)}</p>
-                      {p.attivita && <p style={{ fontSize: 12, color: "#888", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📋 {p.attivita}</p>}
-                    </div>
-                    {(p.user_id === currentUser.id || currentUser.role === "admin") && (
-                      <button onClick={() => deletePresenza(p.id, p.user_id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
-                        <i className="ti ti-trash" style={{ fontSize: 13 }} />
-                      </button>
-                    )}
-                  </div>
-                ))}
+              <div>
+                <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora inizio</label>
+                <input type="time" value={form.ora_inizio} onChange={e => setForm(f => ({ ...f, ora_inizio: e.target.value }))}
+                  style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora fine</label>
+                <input type="time" value={form.ora_fine} onChange={e => setForm(f => ({ ...f, ora_fine: e.target.value }))}
+                  style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
               </div>
             </div>
-          ))
-      }
+            <div style={{ marginBottom: 10 }}>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Descrizione attività</label>
+              <input type="text" value={form.attivita} onChange={e => setForm(f => ({ ...f, attivita: e.target.value }))}
+                placeholder="es. Analisi GC-MS campioni biodiesel..."
+                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            </div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={addPresenza} style={{ flex: 1, padding: "8px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>✓ Conferma</button>
+              <button onClick={() => setShowForm(false)} style={{ padding: "8px 14px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", fontSize: 13, cursor: "pointer" }}>Annulla</button>
+            </div>
+          </div>
+        )}
+
+        {Object.keys(grouped).length === 0
+          ? <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+              <i className="ti ti-calendar-off" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />
+              Nessuna presenza registrata
+            </div>
+          : Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(data => (
+              <div key={data} style={{ marginBottom: 20 }}>
+                <div style={{ background: "#EEEDFE", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: "#534AB7" }}>{fmtDate(data)}</span>
+                  <span style={{ fontSize: 12, color: "#7F77DD", marginLeft: 8 }}>{grouped[data].length} {grouped[data].length === 1 ? "presenza" : "presenze"}</span>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                  {grouped[data].sort((a,b) => a.ora_inizio.localeCompare(b.ora_inizio)).map(p => (
+                    <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: `0.5px solid ${p.user_id === currentUser.id ? "#7F77DD" : "#e0e0e0"}`, borderRadius: 10 }}>
+                      <div style={{ width: 36, height: 36, borderRadius: "50%", background: p.user_id === currentUser.id ? "#EEEDFE" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: p.user_id === currentUser.id ? "#7F77DD" : "#888", flexShrink: 0 }}>
+                        {p.user_name.split(" ").map(n => n[0]).join("").slice(0,2)}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ fontWeight: 500, fontSize: 13, margin: 0 }}>{p.user_name}</p>
+                        <p style={{ fontSize: 12, color: "#7F77DD", margin: "2px 0" }}>🕐 {p.ora_inizio.slice(0,5)} — {p.ora_fine.slice(0,5)}</p>
+                        {p.attivita && <p style={{ fontSize: 12, color: "#888", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📋 {p.attivita}</p>}
+                      </div>
+                      {(p.user_id === currentUser.id || currentUser.role === "admin") && (
+                        <button onClick={() => deletePresenza(p.id, p.user_id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
+                          <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+        }
+      </div>
     </div>
   );
 }
@@ -500,7 +609,7 @@ export default function App() {
   const [bookings, setBookings] = useState([]);
   const [logs, setLogs] = useState([]);
   const [modal, setModal] = useState(null);
-  const [form, setForm] = useState({ day: 0, slot: 0, note: "" });
+  const [form, setForm] = useState({ day: 0, slot: 0, note: "", metodo: "" });
   const [userForm, setUserForm] = useState({ name: "", email: "", role: "researcher" });
   const [loading, setLoading] = useState(false);
 
@@ -553,9 +662,10 @@ export default function App() {
     bookings.find(b => b.equip_id === equipId && b.day === day && b.slot === slot);
 
   const book = async () => {
+    if (!form.metodo.trim()) return alert("Inserisci il metodo di analisi!");
     if (isBooked(modal.id, form.day, form.slot)) return alert("Slot già occupato!");
     const { data, error } = await supabase.from("bookings").insert([{
-      equip_id: modal.id, user_id: currentUser.id, day: form.day, slot: form.slot, note: form.note
+      equip_id: modal.id, user_id: currentUser.id, day: form.day, slot: form.slot, note: form.note, metodo: form.metodo
     }]).select().single();
     if (error) return alert("Errore: " + error.message);
     setBookings(prev => [...prev, data]);
@@ -675,7 +785,7 @@ export default function App() {
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <span style={{ fontSize: 12, color: "#aaa" }}>{busy} pren.</span>
                   {eq.status !== "maintenance" && (
-                    <button onClick={() => { setModal(eq); setForm({ day: 0, slot: 0, note: "" }); }}
+                    <button onClick={() => { setModal(eq); setForm({ day: 0, slot: 0, note: "", metodo: "" }); }}
                       style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #7F77DD", background: "transparent", color: "#7F77DD", cursor: "pointer" }}>
                       <i className="ti ti-calendar-plus" style={{ fontSize: 13, verticalAlign: -2, marginRight: 3 }} />Prenota
                     </button>
@@ -902,6 +1012,10 @@ export default function App() {
                 return <option key={i} value={i}>{s}{taken ? " — occupato" : ""}</option>;
               })}
             </select>
+            <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Metodo di analisi <span style={{ color: "#A32D2D" }}>*</span></label>
+            <input value={form.metodo} onChange={e => setForm(f => ({ ...f, metodo: e.target.value }))}
+              placeholder="es. GC-MS, HPLC, UV-Vis..."
+              style={{ width: "100%", marginBottom: 12, fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
             <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>Note (opzionale)</label>
             <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))}
               placeholder="es. campioni da analizzare..."
