@@ -287,7 +287,143 @@ function InventoryPage({ currentUser }) {
   );
 }
 
-// ─── LOGIN ────────────────────────────────────────────────────────────────────
+// ─── PRESENZE ─────────────────────────────────────────────────────────────────
+function PresenzeePage({ currentUser }) {
+  const [presenze, setPresenze] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ data: "", ora_inizio: "", ora_fine: "", attivita: "" });
+  const [filterDate, setFilterDate] = useState("");
+
+  useEffect(() => {
+    supabase.from("presenze").select("*").order("data", { ascending: false }).order("ora_inizio", { ascending: true })
+      .then(({ data }) => { setPresenze(data || []); setLoading(false); });
+  }, []);
+
+  const addPresenza = async () => {
+    if (!form.data || !form.ora_inizio || !form.ora_fine) return alert("Compila data, ora inizio e ora fine!");
+    if (form.ora_fine <= form.ora_inizio) return alert("L'ora di fine deve essere dopo l'ora di inizio!");
+    const { data, error } = await supabase.from("presenze").insert([{
+      user_id: currentUser.id, user_name: currentUser.name,
+      data: form.data, ora_inizio: form.ora_inizio, ora_fine: form.ora_fine, attivita: form.attivita
+    }]).select().single();
+    if (error) return alert("Errore: " + error.message);
+    setPresenze(prev => [data, ...prev]);
+    setForm({ data: "", ora_inizio: "", ora_fine: "", attivita: "" });
+    setShowForm(false);
+  };
+
+  const deletePresenza = async (id, userId) => {
+    if (userId !== currentUser.id && currentUser.role !== "admin") return alert("Non puoi eliminare presenze altrui!");
+    const { error } = await supabase.from("presenze").delete().eq("id", id);
+    if (error) return alert("Errore: " + error.message);
+    setPresenze(prev => prev.filter(p => p.id !== id));
+  };
+
+  const filtered = presenze.filter(p => !filterDate || p.data === filterDate);
+
+  // Raggruppa per data
+  const grouped = filtered.reduce((acc, p) => {
+    if (!acc[p.data]) acc[p.data] = [];
+    acc[p.data].push(p);
+    return acc;
+  }, {});
+
+  const fmtDate = (d) => new Date(d + "T00:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+
+  if (loading) return <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>Caricamento...</div>;
+
+  return (
+    <div>
+      {/* Toolbar */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+        <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
+          style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 140 }} />
+        {filterDate && (
+          <button onClick={() => setFilterDate("")} style={{ fontSize: 12, padding: "7px 10px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", cursor: "pointer" }}>
+            ✕ Tutti
+          </button>
+        )}
+        <button onClick={() => setShowForm(!showForm)} style={{ fontSize: 12, padding: "7px 14px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
+          <i className="ti ti-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Aggiungi presenza
+        </button>
+      </div>
+
+      {/* Form aggiungi */}
+      {showForm && (
+        <div style={{ background: "#f9f9f9", borderRadius: 12, padding: "1rem", marginBottom: 16, border: "0.5px solid #e0e0e0" }}>
+          <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 12px" }}>📅 Nuova presenza</p>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginBottom: 8 }}>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Data</label>
+              <input type="date" value={form.data} onChange={e => setForm(f => ({ ...f, data: e.target.value }))}
+                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora inizio</label>
+              <input type="time" value={form.ora_inizio} onChange={e => setForm(f => ({ ...f, ora_inizio: e.target.value }))}
+                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Ora fine</label>
+              <input type="time" value={form.ora_fine} onChange={e => setForm(f => ({ ...f, ora_fine: e.target.value }))}
+                style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+            </div>
+          </div>
+          <div style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 11, color: "#888", display: "block", marginBottom: 3 }}>Descrizione attività</label>
+            <input type="text" value={form.attivita} onChange={e => setForm(f => ({ ...f, attivita: e.target.value }))}
+              placeholder="es. Analisi GC-MS campioni biodiesel..."
+              style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={addPresenza} style={{ flex: 1, padding: "8px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>
+              ✓ Conferma
+            </button>
+            <button onClick={() => setShowForm(false)} style={{ padding: "8px 14px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", fontSize: 13, cursor: "pointer" }}>
+              Annulla
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Lista presenze raggruppate per data */}
+      {Object.keys(grouped).length === 0
+        ? <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
+            <i className="ti ti-calendar-off" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />
+            Nessuna presenza registrata
+          </div>
+        : Object.keys(grouped).sort((a, b) => b.localeCompare(a)).map(data => (
+            <div key={data} style={{ marginBottom: 20 }}>
+              <div style={{ background: "#EEEDFE", borderRadius: 8, padding: "8px 12px", marginBottom: 8 }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: "#534AB7" }}>{fmtDate(data)}</span>
+                <span style={{ fontSize: 12, color: "#7F77DD", marginLeft: 8 }}>{grouped[data].length} {grouped[data].length === 1 ? "presenza" : "presenze"}</span>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {grouped[data].map(p => (
+                  <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: `0.5px solid ${p.user_id === currentUser.id ? "#7F77DD" : "#e0e0e0"}`, borderRadius: 10 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: p.user_id === currentUser.id ? "#EEEDFE" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: p.user_id === currentUser.id ? "#7F77DD" : "#888", flexShrink: 0 }}>
+                      {p.user_name.split(" ").map(n => n[0]).join("").slice(0,2)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <p style={{ fontWeight: 500, fontSize: 13, margin: 0 }}>{p.user_name}</p>
+                      <p style={{ fontSize: 12, color: "#7F77DD", margin: "2px 0" }}>🕐 {p.ora_inizio.slice(0,5)} — {p.ora_fine.slice(0,5)}</p>
+                      {p.attivita && <p style={{ fontSize: 12, color: "#888", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>📋 {p.attivita}</p>}
+                    </div>
+                    {(p.user_id === currentUser.id || currentUser.role === "admin") && (
+                      <button onClick={() => deletePresenza(p.id, p.user_id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
+                        <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))
+      }
+    </div>
+  );
+}
 function LoginPage({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -526,6 +662,7 @@ export default function App() {
         {navBtn("calendar", "Calendario", "calendar")}
         {navBtn("mybookings", "Prenotazioni", "bookmark")}
         {navBtn("inventory", "Inventario", "box")}
+        {navBtn("presenze", "Presenze", "user-check")}
         {currentUser.role === "admin" && navBtn("admin", "Admin", "settings", pendingUsers.length)}
       </div>
 
