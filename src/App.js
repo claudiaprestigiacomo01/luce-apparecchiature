@@ -88,7 +88,7 @@ function InventoryPage({ currentUser }) {
     if (error) return alert("Errore: " + error.message);
     setItems(prev => [...prev, data]);
     setModal(null);
-    setForm({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", notes: "" });
+    setForm({ name: "", category: "Reagente", quantity: "", unit: "", min_quantity: "", status: "available", location: "", notes: "" });
   };
 
   const updateQuantity = async (type) => {
@@ -130,9 +130,9 @@ function InventoryPage({ currentUser }) {
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
-        <button onClick={() => setTab("reagenti")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0", color: tab === "reagenti" ? "#fff" : "#555", fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14 }}>🧪 Reagenti</button>
-        <button onClick={() => setTab("bombole")} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "bombole" ? "#178BCA" : "#f0f0f0", color: tab === "bombole" ? "#fff" : "#555", fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14 }}>🫧 Bombole Gas</button>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        <button onClick={() => { setTab("reagenti"); setFilterLocation(""); setFilterStatus(""); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "reagenti" ? "#1D9E75" : "#f0f0f0", color: tab === "reagenti" ? "#fff" : "#555", fontWeight: tab === "reagenti" ? 600 : 400, fontSize: 14 }}>🧪 Reagenti</button>
+        <button onClick={() => { setTab("bombole"); setFilterLocation(""); setFilterStatus(""); }} style={{ flex: 1, padding: "10px", borderRadius: 8, border: "none", cursor: "pointer", background: tab === "bombole" ? "#178BCA" : "#f0f0f0", color: tab === "bombole" ? "#fff" : "#555", fontWeight: tab === "bombole" ? 600 : 400, fontSize: 14 }}>🫧 Bombole Gas</button>
       </div>
 
       <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
@@ -182,38 +182,35 @@ function InventoryPage({ currentUser }) {
               return (
                 <div key={item.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 10 }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4, flexWrap: "wrap" }}>
                       <span style={{ fontWeight: 500, fontSize: 14 }}>{item.name}</span>
                       <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{st.label}</span>
                     </div>
                     <div style={{ fontSize: 12, color: "#888" }}>
                       {item.category === "Reagente"
-                        ? <span>Quantità: <b>{item.quantity} {item.unit}</b>{item.min_quantity > 0 ? ` (min: ${item.min_quantity} ${item.unit})` : ""}</span>
-                        : <span>Stato bombola</span>}
-                      {item.notes && <span style={{ color: "#aaa", marginLeft: 8 }}>· {item.notes}</span>}
+                        ? <span>Qta: <b>{item.quantity} {item.unit}</b>{item.min_quantity > 0 ? ` (min: ${item.min_quantity})` : ""}</span>
+                        : <span>Bombola</span>}
+                      {item.location && <span style={{ color: "#7F77DD", marginLeft: 6 }}>· 📍 {item.location}</span>}
+                      {item.notes && <span style={{ color: "#aaa", marginLeft: 6 }}>· {item.notes}</span>}
                     </div>
                     {item.updated_by && <div style={{ fontSize: 11, color: "#bbb", marginTop: 2 }}>Aggiornato da {item.updated_by}</div>}
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                     {item.category === "Reagente" ? (
-                      <>
-                        <button onClick={() => { setSelected(item); setModal("load"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #3B6D11", color: "#3B6D11", background: "transparent", cursor: "pointer" }}>
-                          <i className="ti ti-arrow-up" style={{ fontSize: 13, verticalAlign: -2 }} /> Carica
-                        </button>
-                        <button onClick={() => { setSelected(item); setModal("unload"); }} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #854F0B", color: "#854F0B", background: "transparent", cursor: "pointer" }}>
-                          <i className="ti ti-arrow-down" style={{ fontSize: 13, verticalAlign: -2 }} /> Scarica
-                        </button>
-                      </>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button onClick={() => { setSelected(item); setModal("load"); }} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "0.5px solid #3B6D11", color: "#3B6D11", background: "transparent", cursor: "pointer" }}>↑ Carica</button>
+                        <button onClick={() => { setSelected(item); setModal("unload"); }} style={{ fontSize: 11, padding: "4px 8px", borderRadius: 6, border: "0.5px solid #854F0B", color: "#854F0B", background: "transparent", cursor: "pointer" }}>↓ Scarica</button>
+                      </div>
                     ) : (
                       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
                         <select value={item.status} onChange={e => updateStatus(item.id, e.target.value)}
-                          style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                          style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
                           <option value="full">Piena</option>
                           <option value="partial">Parziale</option>
                           <option value="empty">Vuota</option>
                         </select>
                         <select value={item.location || ""} onChange={e => updateLocation(item.id, e.target.value)}
-                          style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc" }}>
+                          style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
                           <option value="">📍 Posizione</option>
                           <option value="gabbiotto_inerti">Gabbiotto Inerti</option>
                           <option value="gabbiotto_infiammabili">Gabbiotto Infiammabili</option>
@@ -224,8 +221,8 @@ function InventoryPage({ currentUser }) {
                       </div>
                     )}
                     {currentUser.role === "admin" && (
-                      <button onClick={() => deleteItem(item.id)} style={{ fontSize: 12, padding: "5px 8px", borderRadius: 6, border: "0.5px solid #ccc", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
-                        <i className="ti ti-trash" style={{ fontSize: 13 }} />
+                      <button onClick={() => deleteItem(item.id)} style={{ fontSize: 11, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc", color: "#A32D2D", background: "transparent", cursor: "pointer" }}>
+                        <i className="ti ti-trash" style={{ fontSize: 12 }} />
                       </button>
                     )}
                   </div>
@@ -237,7 +234,7 @@ function InventoryPage({ currentUser }) {
 
       {modal === "add" && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-          <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 360, maxWidth: "90vw" }}>
+          <div style={{ background: "#fff", borderRadius: 14, padding: "1.5rem", width: 360, maxWidth: "90vw", maxHeight: "90vh", overflowY: "auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
               <p style={{ fontWeight: 500, fontSize: 15, margin: 0 }}>Aggiungi elemento</p>
               <button onClick={() => setModal(null)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 18, color: "#888" }}>×</button>
@@ -247,8 +244,8 @@ function InventoryPage({ currentUser }) {
               { label: "Quantità", key: "quantity", type: "number", placeholder: "0" },
               { label: "Unità", key: "unit", type: "text", placeholder: "es. L, kg, pz" },
               { label: "Scorta minima", key: "min_quantity", type: "number", placeholder: "0" },
+              { label: "Posizione", key: "location", type: "text", placeholder: "es. Armadio 1A, Piano Terra..." },
               { label: "Note", key: "notes", type: "text", placeholder: "opzionale" },
-            { label: "Posizione", key: "location", type: "text", placeholder: "es. Armadio 1A, Piano Terra..." },
             ].map(f => (
               <div key={f.key}>
                 <label style={{ fontSize: 12, color: "#888", display: "block", marginBottom: 4 }}>{f.label}</label>
@@ -296,7 +293,7 @@ function PresenzeePage({ currentUser }) {
   const [filterDate, setFilterDate] = useState("");
 
   useEffect(() => {
-    supabase.from("presenze").select("*").order("data", { ascending: false }).order("ora_inizio", { ascending: true })
+    supabase.from("presenze").select("*").order("data", { ascending: false })
       .then(({ data }) => { setPresenze(data || []); setLoading(false); });
   }, []);
 
@@ -322,7 +319,6 @@ function PresenzeePage({ currentUser }) {
 
   const filtered = presenze.filter(p => !filterDate || p.data === filterDate);
 
-  // Raggruppa per data
   const grouped = filtered.reduce((acc, p) => {
     if (!acc[p.data]) acc[p.data] = [];
     acc[p.data].push(p);
@@ -335,7 +331,6 @@ function PresenzeePage({ currentUser }) {
 
   return (
     <div>
-      {/* Toolbar */}
       <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
         <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
           style={{ flex: 1, fontSize: 13, padding: "7px 10px", borderRadius: 8, border: "0.5px solid #ccc", minWidth: 140 }} />
@@ -349,7 +344,6 @@ function PresenzeePage({ currentUser }) {
         </button>
       </div>
 
-      {/* Form aggiungi */}
       {showForm && (
         <div style={{ background: "#f9f9f9", borderRadius: 12, padding: "1rem", marginBottom: 16, border: "0.5px solid #e0e0e0" }}>
           <p style={{ fontWeight: 500, fontSize: 14, margin: "0 0 12px" }}>📅 Nuova presenza</p>
@@ -377,17 +371,12 @@ function PresenzeePage({ currentUser }) {
               style={{ width: "100%", fontSize: 13, padding: "6px 8px", borderRadius: 6, border: "0.5px solid #ccc", boxSizing: "border-box" }} />
           </div>
           <div style={{ display: "flex", gap: 8 }}>
-            <button onClick={addPresenza} style={{ flex: 1, padding: "8px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>
-              ✓ Conferma
-            </button>
-            <button onClick={() => setShowForm(false)} style={{ padding: "8px 14px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", fontSize: 13, cursor: "pointer" }}>
-              Annulla
-            </button>
+            <button onClick={addPresenza} style={{ flex: 1, padding: "8px", borderRadius: 6, border: "none", background: "#7F77DD", color: "#fff", fontWeight: 500, fontSize: 13, cursor: "pointer" }}>✓ Conferma</button>
+            <button onClick={() => setShowForm(false)} style={{ padding: "8px 14px", borderRadius: 6, border: "0.5px solid #ccc", background: "transparent", color: "#888", fontSize: 13, cursor: "pointer" }}>Annulla</button>
           </div>
         </div>
       )}
 
-      {/* Lista presenze raggruppate per data */}
       {Object.keys(grouped).length === 0
         ? <div style={{ textAlign: "center", padding: "2rem", color: "#888" }}>
             <i className="ti ti-calendar-off" style={{ fontSize: 32, display: "block", marginBottom: 8 }} />
@@ -400,7 +389,7 @@ function PresenzeePage({ currentUser }) {
                 <span style={{ fontSize: 12, color: "#7F77DD", marginLeft: 8 }}>{grouped[data].length} {grouped[data].length === 1 ? "presenza" : "presenze"}</span>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {grouped[data].map(p => (
+                {grouped[data].sort((a,b) => a.ora_inizio.localeCompare(b.ora_inizio)).map(p => (
                   <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.8rem 1rem", background: "#fff", border: `0.5px solid ${p.user_id === currentUser.id ? "#7F77DD" : "#e0e0e0"}`, borderRadius: 10 }}>
                     <div style={{ width: 36, height: 36, borderRadius: "50%", background: p.user_id === currentUser.id ? "#EEEDFE" : "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 600, color: p.user_id === currentUser.id ? "#7F77DD" : "#888", flexShrink: 0 }}>
                       {p.user_name.split(" ").map(n => n[0]).join("").slice(0,2)}
@@ -408,7 +397,7 @@ function PresenzeePage({ currentUser }) {
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <p style={{ fontWeight: 500, fontSize: 13, margin: 0 }}>{p.user_name}</p>
                       <p style={{ fontSize: 12, color: "#7F77DD", margin: "2px 0" }}>🕐 {p.ora_inizio.slice(0,5)} — {p.ora_fine.slice(0,5)}</p>
-                      {p.attivita && <p style={{ fontSize: 12, color: "#888", margin: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>📋 {p.attivita}</p>}
+                      {p.attivita && <p style={{ fontSize: 12, color: "#888", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>📋 {p.attivita}</p>}
                     </div>
                     {(p.user_id === currentUser.id || currentUser.role === "admin") && (
                       <button onClick={() => deletePresenza(p.id, p.user_id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
@@ -424,6 +413,8 @@ function PresenzeePage({ currentUser }) {
     </div>
   );
 }
+
+// ─── LOGIN ────────────────────────────────────────────────────────────────────
 function LoginPage({ onLogin }) {
   const [mode, setMode] = useState("login");
   const [email, setEmail] = useState("");
@@ -465,7 +456,7 @@ function LoginPage({ onLogin }) {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f5f5f7" }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 340, boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+      <div style={{ background: "#fff", borderRadius: 16, padding: "2rem", width: 340, maxWidth: "90vw", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
         <div style={{ textAlign: "center", marginBottom: 24 }}>
           <i className="ti ti-flask" style={{ fontSize: 36, color: "#7F77DD" }} />
           <h2 style={{ margin: "8px 0 4px", fontSize: 22, fontWeight: 600 }}>LTCE</h2>
@@ -656,7 +647,7 @@ export default function App() {
         </div>
       </div>
 
-      {/* Nav — scroll orizzontale su mobile */}
+      {/* Nav */}
       <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto", paddingBottom: 4, WebkitOverflowScrolling: "touch" }}>
         {navBtn("catalog", "Strumenti", "microscope")}
         {navBtn("calendar", "Calendario", "calendar")}
@@ -668,13 +659,13 @@ export default function App() {
 
       {/* CATALOG */}
       {view === "catalog" && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
           {equipment.map(eq => {
             const busy = bookings.filter(b => b.equip_id === eq.id).length;
             const st = STATUS_STYLE[eq.status] || STATUS_STYLE.available;
             const catColor = CAT_COLORS[eq.category] || "#888";
             return (
-              <div key={eq.id} style={{ background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 12, padding: "1rem 1.1rem" }}>
+              <div key={eq.id} style={{ background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 12, padding: "1rem" }}>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
                   <span style={{ fontSize: 11, fontWeight: 500, padding: "2px 8px", borderRadius: 6, background: catColor + "22", color: catColor }}>{eq.category}</span>
                   <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 6, background: st.bg, color: st.color }}>{st.label}</span>
@@ -682,11 +673,11 @@ export default function App() {
                 <p style={{ fontWeight: 500, fontSize: 14, margin: "6px 0 4px" }}>{eq.name}</p>
                 <p style={{ fontSize: 12, color: "#888", margin: "0 0 10px" }}>{eq.description}</p>
                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 12, color: "#aaa" }}>{busy} prenotazioni</span>
+                  <span style={{ fontSize: 12, color: "#aaa" }}>{busy} pren.</span>
                   {eq.status !== "maintenance" && (
                     <button onClick={() => { setModal(eq); setForm({ day: 0, slot: 0, note: "" }); }}
-                      style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "0.5px solid #7F77DD", background: "transparent", color: "#7F77DD", cursor: "pointer" }}>
-                      <i className="ti ti-calendar-plus" style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />Prenota
+                      style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "0.5px solid #7F77DD", background: "transparent", color: "#7F77DD", cursor: "pointer" }}>
+                      <i className="ti ti-calendar-plus" style={{ fontSize: 13, verticalAlign: -2, marginRight: 3 }} />Prenota
                     </button>
                   )}
                 </div>
@@ -698,29 +689,29 @@ export default function App() {
 
       {/* CALENDAR */}
       {view === "calendar" && (
-        <div style={{ overflowX: "auto" }}>
+        <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
           <p style={{ fontSize: 13, color: "#888", marginBottom: 12 }}>Prossimi 7 giorni</p>
-          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11 }}>
             <thead>
               <tr>
-                <th style={{ padding: "6px 8px", textAlign: "left", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0" }}>Slot</th>
-                {DAYS.map((d, i) => <th key={i} style={{ padding: "6px 8px", textAlign: "center", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0", minWidth: 80 }}>{fmt(d)}</th>)}
+                <th style={{ padding: "6px 6px", textAlign: "left", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0", whiteSpace: "nowrap" }}>Slot</th>
+                {DAYS.map((d, i) => <th key={i} style={{ padding: "6px 6px", textAlign: "center", color: "#888", fontWeight: 500, borderBottom: "0.5px solid #e0e0e0", minWidth: 70 }}>{fmt(d)}</th>)}
               </tr>
             </thead>
             <tbody>
               {SLOTS.map((slot, si) => (
                 <tr key={si}>
-                  <td style={{ padding: "6px 8px", color: "#888", whiteSpace: "nowrap", borderBottom: "0.5px solid #e0e0e0" }}>{slot}</td>
+                  <td style={{ padding: "6px 6px", color: "#888", whiteSpace: "nowrap", borderBottom: "0.5px solid #e0e0e0", fontSize: 11 }}>{slot}</td>
                   {DAYS.map((_, di) => {
                     const dayBookings = bookings.filter(b => b.day === di && b.slot === si);
                     return (
-                      <td key={di} style={{ padding: 4, textAlign: "center", borderBottom: "0.5px solid #e0e0e0" }}>
+                      <td key={di} style={{ padding: 3, textAlign: "center", borderBottom: "0.5px solid #e0e0e0" }}>
                         {dayBookings.length === 0
-                          ? <span style={{ fontSize: 11, color: "#3B6D11", background: "#EAF3DE", padding: "2px 6px", borderRadius: 4 }}>libero</span>
+                          ? <span style={{ fontSize: 10, color: "#3B6D11", background: "#EAF3DE", padding: "2px 4px", borderRadius: 4 }}>libero</span>
                           : dayBookings.map(b => {
                               const eq = equipment.find(e => e.id === b.equip_id);
                               const usr = users.find(u => u.id === b.user_id);
-                              return <div key={b.id} style={{ fontSize: 10, background: "#EEEDFE", color: "#534AB7", borderRadius: 4, padding: "2px 4px", marginBottom: 2 }}>{eq?.name.split(" ")[0]}<br /><span style={{ color: "#7F77DD" }}>{usr?.name.split(" ")[0]}</span></div>;
+                              return <div key={b.id} style={{ fontSize: 9, background: "#EEEDFE", color: "#534AB7", borderRadius: 4, padding: "2px 3px", marginBottom: 2 }}>{eq?.name.split(" ")[0]}<br /><span style={{ color: "#7F77DD" }}>{usr?.name.split(" ")[0]}</span></div>;
                             })
                         }
                       </td>
@@ -746,18 +737,18 @@ export default function App() {
                   const eq = equipment.find(e => e.id === b.equip_id);
                   return (
                     <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 12, background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 10, padding: "0.8rem 1rem" }}>
-                      <div style={{ width: 40, height: 40, borderRadius: 8, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ width: 40, height: 40, borderRadius: 8, background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                         <i className="ti ti-flask" style={{ fontSize: 20, color: "#7F77DD" }} />
                       </div>
-                      <div style={{ flex: 1 }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ fontWeight: 500, fontSize: 14, margin: 0 }}>{eq?.name}</p>
                         <p style={{ fontSize: 12, color: "#888", margin: "2px 0 0" }}>
                           {fmt(DAYS[b.day])} · {SLOTS[b.slot]}
                           {b.note && <span style={{ color: "#aaa" }}> · {b.note}</span>}
                         </p>
                       </div>
-                      <button onClick={() => cancel(b.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "5px 10px", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>
-                        <i className="ti ti-trash" style={{ fontSize: 14, verticalAlign: -2 }} /> Annulla
+                      <button onClick={() => cancel(b.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "5px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
+                        <i className="ti ti-trash" style={{ fontSize: 14, verticalAlign: -2 }} />
                       </button>
                     </div>
                   );
@@ -767,6 +758,9 @@ export default function App() {
         </div>
       )}
 
+      {/* PRESENZE */}
+      {view === "presenze" && <PresenzeePage currentUser={currentUser} />}
+
       {/* INVENTORY */}
       {view === "inventory" && <InventoryPage currentUser={currentUser} />}
 
@@ -775,9 +769,9 @@ export default function App() {
         <div>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 20 }}>
             {[
-              { label: "Prenotazioni totali", value: bookings.length, icon: "calendar" },
-              { label: "Apparecchiature", value: equipment.length, icon: "microscope" },
-              { label: "Utenti registrati", value: users.length, icon: "users" },
+              { label: "Prenotazioni", value: bookings.length, icon: "calendar" },
+              { label: "Strumenti", value: equipment.length, icon: "microscope" },
+              { label: "Utenti", value: users.length, icon: "users" },
             ].map((m, i) => (
               <div key={i} style={{ background: "#f5f5f5", borderRadius: 8, padding: "0.8rem 1rem" }}>
                 <p style={{ fontSize: 12, color: "#888", margin: "0 0 4px" }}><i className={`ti ti-${m.icon}`} style={{ fontSize: 14, verticalAlign: -2, marginRight: 4 }} />{m.label}</p>
@@ -786,7 +780,6 @@ export default function App() {
             ))}
           </div>
 
-          {/* Richieste in attesa */}
           {pendingUsers.length > 0 && (
             <div style={{ background: "#FFFBEA", border: "0.5px solid #F0C040", borderRadius: 8, padding: "1rem", marginBottom: 20 }}>
               <p style={{ fontSize: 13, fontWeight: 600, color: "#856404", margin: "0 0 10px" }}>⏳ Richieste in attesa ({pendingUsers.length})</p>
@@ -797,15 +790,14 @@ export default function App() {
                       <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{u.name}</p>
                       <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email}</p>
                     </div>
-                    <button onClick={() => approveUser(u.id)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#3B6D11", color: "#fff", cursor: "pointer" }}>✓ Approva</button>
-                    <button onClick={() => rejectUser(u.id)} style={{ fontSize: 12, padding: "5px 12px", borderRadius: 6, border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer" }}>✗ Rifiuta</button>
+                    <button onClick={() => approveUser(u.id)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "#3B6D11", color: "#fff", cursor: "pointer" }}>✓ Approva</button>
+                    <button onClick={() => rejectUser(u.id)} style={{ fontSize: 12, padding: "5px 10px", borderRadius: 6, border: "none", background: "#A32D2D", color: "#fff", cursor: "pointer" }}>✗ Rifiuta</button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Gestione utenti */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>Gestione utenti</p>
           <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
             <input value={userForm.name} onChange={e => setUserForm(f => ({ ...f, name: e.target.value }))} placeholder="Nome e cognome"
@@ -825,12 +817,12 @@ export default function App() {
           <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 20 }}>
             {users.filter(u => u.status !== "pending").map(u => (
               <div key={u.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
-                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#534AB7" }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: "#EEEDFE", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 500, color: "#534AB7", flexShrink: 0 }}>
                   {u.name.split(" ").map(n => n[0]).join("").slice(0,2)}
                 </div>
-                <div style={{ flex: 1 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontSize: 13, fontWeight: 500, margin: 0 }}>{u.name}</p>
-                  <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{u.email}</p>
+                  <p style={{ fontSize: 11, color: "#aaa", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{u.email}</p>
                 </div>
                 <select value={u.role} onChange={e => changeRole(u.id, e.target.value)}
                   style={{ fontSize: 12, padding: "4px 6px", borderRadius: 6, border: "0.5px solid #ccc" }}>
@@ -845,7 +837,6 @@ export default function App() {
             ))}
           </div>
 
-          {/* Cronologia */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", margin: "20px 0 8px" }}>📋 Cronologia azioni</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 20 }}>
             {logs.length === 0
@@ -853,13 +844,13 @@ export default function App() {
               : logs.map(l => (
                 <div key={l.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.6rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
                   <i className={`ti ti-${l.action.includes("creata") ? "calendar-plus" : "calendar-minus"}`}
-                    style={{ fontSize: 16, color: l.action.includes("creata") ? "#3B6D11" : "#A32D2D" }} />
-                  <div style={{ flex: 1 }}>
+                    style={{ fontSize: 16, color: l.action.includes("creata") ? "#3B6D11" : "#A32D2D", flexShrink: 0 }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontSize: 13, fontWeight: 500 }}>{l.action}</span>
                     {l.equipment_name && <span style={{ fontSize: 12, color: "#888", marginLeft: 6 }}>— {l.equipment_name}</span>}
                     {l.details && <span style={{ fontSize: 12, color: "#aaa", marginLeft: 6 }}>{l.details}</span>}
                   </div>
-                  <div style={{ textAlign: "right" }}>
+                  <div style={{ textAlign: "right", flexShrink: 0 }}>
                     <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{l.user_name}</p>
                     <p style={{ fontSize: 11, color: "#aaa", margin: 0 }}>{new Date(l.created_at).toLocaleDateString("it-IT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}</p>
                   </div>
@@ -868,7 +859,6 @@ export default function App() {
             }
           </div>
 
-          {/* Tutte le prenotazioni */}
           <p style={{ fontSize: 13, fontWeight: 500, color: "#888", marginBottom: 8 }}>Tutte le prenotazioni</p>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {bookings.map(b => {
@@ -876,12 +866,12 @@ export default function App() {
               const usr = users.find(u => u.id === b.user_id);
               return (
                 <div key={b.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "0.7rem 1rem", background: "#fff", border: "0.5px solid #e0e0e0", borderRadius: 8 }}>
-                  <div style={{ flex: 1 }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
                     <span style={{ fontWeight: 500, fontSize: 13 }}>{eq?.name}</span>
                     <span style={{ fontSize: 12, color: "#888", marginLeft: 8 }}>{fmt(DAYS[b.day])} · {SLOTS[b.slot]}</span>
                   </div>
-                  <span style={{ fontSize: 12, color: "#888" }}>{usr?.name}</span>
-                  <button onClick={() => cancel(b.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12 }}>
+                  <span style={{ fontSize: 12, color: "#888", flexShrink: 0 }}>{usr?.name.split(" ")[0]}</span>
+                  <button onClick={() => cancel(b.id)} style={{ background: "transparent", border: "0.5px solid #ccc", borderRadius: 6, padding: "4px 8px", cursor: "pointer", color: "#A32D2D", fontSize: 12, flexShrink: 0 }}>
                     <i className="ti ti-x" style={{ fontSize: 13 }} />
                   </button>
                 </div>
